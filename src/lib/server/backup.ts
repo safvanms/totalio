@@ -17,7 +17,7 @@ export async function createBackup(db: PrismaClient): Promise<Backup> {
     getSettings(),
   ]);
   return {
-    app: "spendly",
+    app: "totalio",
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
     settings,
@@ -54,7 +54,7 @@ function parseBackup(input: unknown): Backup {
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     throw badRequest(
-      `This file is not a valid Spendly data file${issue ? ` (${issue.path.join(".")}: ${issue.message})` : ""}.`,
+      `This file is not a valid Totalio data file${issue ? ` (${issue.path.join(".")}: ${issue.message})` : ""}.`,
       parsed.error.flatten(),
     );
   }

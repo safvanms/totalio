@@ -97,7 +97,7 @@ export function DataExportMenu({ label = "Export data", variant = "outline", siz
     try {
       const backup = await api<Backup>("/api/backup");
       if (format === "pdf") {
-        await exportPDF(backupTables(backup, dateFormat), `spendly-report-${new Date().toISOString().slice(0, 10)}`, (n) => money(n), "Spendly – all data");
+        await exportPDF(backupTables(backup, dateFormat), `totalio-report-${new Date().toISOString().slice(0, 10)}`, (n) => money(n), "Totalio – all data");
       } else {
         await downloadDataFile(format, backup);
       }
@@ -238,7 +238,7 @@ export function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChan
       <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>Import data</DialogTitle>
-          <DialogDescription>Restore a Spendly export (CSV, Excel or JSON), or add expenses from a spreadsheet. You&apos;ll see a preview before anything changes.</DialogDescription>
+          <DialogDescription>Restore a Totalio export (CSV, Excel or JSON), or add expenses from a spreadsheet. You&apos;ll see a preview before anything changes.</DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-4 pb-5">
           {!result && (
@@ -286,7 +286,7 @@ export function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                   {file?.name}
                 </p>
                 <div className="flex items-center gap-2">
-                  <Badge variant={result.kind === "full" ? "default" : "secondary"}>{result.kind === "full" ? "Spendly data file" : "Expense list"}</Badge>
+                  <Badge variant={result.kind === "full" ? "default" : "secondary"}>{result.kind === "full" ? "Totalio data file" : "Expense list"}</Badge>
                   <Button variant="ghost" size="xs" onClick={reset}>
                     Change file
                   </Button>
@@ -371,7 +371,7 @@ export function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                         {mode === o.v ? <CheckCircle2 className="h-4 w-4 text-primary" /> : <span className="h-4 w-4 rounded-full border" />}
                         {o.title}
                       </span>
-                      <span className="mt-1 block text-xs text-muted-foreground">{o.disabled ? "Only available for full Spendly data files." : o.desc}</span>
+                      <span className="mt-1 block text-xs text-muted-foreground">{o.disabled ? "Only available for full Totalio data files." : o.desc}</span>
                     </button>
                   ))}
                 </div>

@@ -1,8 +1,8 @@
 {
-  "name": "spendly",
+  "name": "totalio",
   "version": "1.0.0",
   "private": true,
-  "description": "Spendly – Personal Expense Management & Analytics Dashboard",
+  "description": "Totalio – Personal Expense Management & Analytics Dashboard",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

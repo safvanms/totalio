@@ -1,4 +1,4 @@
-# Spendly
+# Totalio
 
 Personal expense management & analytics dashboard with a visual, drag-and-drop formula builder for calculated categories.
 

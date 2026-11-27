@@ -4,7 +4,7 @@ import { backupToXlsx, importFromXlsx } from "./data-file-io";
 import type { Backup } from "./validation";
 
 const backup: Backup = {
-  app: "spendly",
+  app: "totalio",
   version: 1,
   exportedAt: "2026-11-27T10:00:00.000Z",
   settings: {
@@ -81,7 +81,19 @@ describe("Excel round trip", () => {
 describe("JSON", () => {
   it("accepts a backup and rejects other JSON", () => {
     expect(importFromJson(JSON.parse(JSON.stringify(backup))).stats.expenses).toBe(3);
-    expect(() => importFromJson({ foo: 1 })).toThrow(/not a Spendly backup/);
+    expect(() => importFromJson({ foo: 1 })).toThrow(/not a Totalio backup/);
+  });
+});
+
+describe("files exported before the rename (app = spendly)", () => {
+  it("still import as full data files (JSON and CSV)", () => {
+    const legacy = { ...backup, app: "spendly" as const };
+    expect(importFromJson(JSON.parse(JSON.stringify(legacy))).kind).toBe("full");
+    const csv = backupToCsv(backup).replace(",app,totalio", ",app,spendly");
+    expect(csv).toContain("app,spendly");
+    const r = importFromCsvText(csv);
+    expect(r.errors).toEqual([]);
+    expect(r.kind).toBe("full");
   });
 });
 

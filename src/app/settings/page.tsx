@@ -71,7 +71,7 @@ export default function SettingsPage() {
     <>
       <PageHeader
         title="Settings"
-        description="Personalise Spendly and manage your data."
+        description="Personalise Totalio and manage your data."
         actions={
           <>
             {dirty && (

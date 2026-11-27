@@ -21,6 +21,17 @@ interface UiState {
   setRange: (scope: string, r: RangeState) => void;
 }
 
+// Carry over saved UI preferences from before the rename.
+if (typeof window !== "undefined") {
+  try {
+    const legacy = localStorage.getItem("spendly-ui");
+    if (legacy && !localStorage.getItem("totalio-ui")) localStorage.setItem("totalio-ui", legacy);
+    if (legacy) localStorage.removeItem("spendly-ui");
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
@@ -32,7 +43,7 @@ export const useUiStore = create<UiState>()(
       setRange: (scope, r) => set((s) => ({ ranges: { ...s.ranges, [scope]: r } })),
     }),
     {
-      name: "spendly-ui",
+      name: "totalio-ui",
       partialize: (s) => ({ sidebarCollapsed: s.sidebarCollapsed, ranges: s.ranges }),
     },
   ),

@@ -71,7 +71,7 @@ export function exportCSV(tables: ExportTable[], filename: string) {
 export async function exportExcel(tables: ExportTable[], filename: string, currencySymbol = "") {
   const ExcelJS = (await import("exceljs")).default;
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Spendly";
+  wb.creator = "Totalio";
   wb.created = new Date();
   const used = new Set<string>();
   for (const t of tables) {
@@ -121,7 +121,7 @@ export async function exportExcel(tables: ExportTable[], filename: string, curre
   download(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `${filename}.xlsx`);
 }
 
-export async function exportPDF(tables: ExportTable[], filename: string, formatMoney: (n: number) => string, heading = "Spendly report") {
+export async function exportPDF(tables: ExportTable[], filename: string, formatMoney: (n: number) => string, heading = "Totalio report") {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
   const doc = new jsPDF({ orientation: tables.some((t) => t.columns.length > 5) ? "landscape" : "portrait", unit: "pt" });

@@ -75,7 +75,8 @@ export const settingsSchema = z.object({
 });
 
 export const backupSchema = z.object({
-  app: z.literal("spendly"),
+  // "spendly" = files exported before the app was renamed; still importable.
+  app: z.enum(["totalio", "spendly"]),
   version: z.number().int(),
   exportedAt: z.string(),
   settings: settingsSchema.partial().optional(),

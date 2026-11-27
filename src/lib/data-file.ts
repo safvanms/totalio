@@ -1,5 +1,5 @@
 /**
- * Spendly data files: a portable, re-importable representation of all data.
+ * Totalio data files: a portable, re-importable representation of all data.
  *
  *  - CSV  : one table, every row tagged with `record_type`
  *           (META / SETTING / CATEGORY / EXPENSE). Opens fine in Excel.
@@ -21,6 +21,9 @@ import { MAX_AMOUNT } from "@/lib/money";
 import type { Backup } from "@/lib/validation";
 
 export const DATA_FILE_VERSION = 1;
+
+/** Files exported before the rename to Totalio say "spendly"; both are accepted. */
+export const isAppMarker = (v: unknown) => v === "totalio" || v === "spendly";
 
 export type Cell = string | number | boolean | Date | null | undefined;
 export type RecordRow = Record<string, Cell>;
@@ -66,7 +69,7 @@ export function backupToRecords(b: Backup) {
     id: e.id ?? "",
   }));
   const settings: RecordRow[] = [
-    { key: "app", value: "spendly" },
+    { key: "app", value: "totalio" },
     { key: "version", value: String(DATA_FILE_VERSION) },
     { key: "exported_at", value: b.exportedAt },
   ];
@@ -201,7 +204,7 @@ export function parseDateCell(v: Cell, preferredFormat?: string): string | null 
 }
 
 export interface ImportResult {
-  /** "full": complete Spendly data file. "expenses": a report/expense list (merge only). */
+  /** "full": complete Totalio data file. "expenses": a report/expense list (merge only). */
   kind: "full" | "expenses";
   backup: Backup;
   errors: string[];
@@ -371,21 +374,21 @@ export function recordsToBackup(
   if (errors.length === MAX_ERRORS) errors.push("…more problems not shown.");
 
   const backup: Backup = {
-    app: "spendly",
+    app: "totalio",
     version: DATA_FILE_VERSION,
     exportedAt: kv.get("exported_at") || new Date().toISOString(),
     settings: settings as Backup["settings"],
     categories,
     expenses,
   };
-  const kind = input.categories.length || kv.get("app") === "spendly" ? "full" : "expenses";
+  const kind = input.categories.length || isAppMarker(kv.get("app")) ? "full" : "expenses";
   if (kind === "expenses") {
     warnings.unshift("This file only lists expenses. They can be merged into your data; categories are matched by name and created if missing.");
   }
   return { kind, backup, errors, warnings, stats: statsOf(backup) };
 }
 
-/** Records from a single CSV/sheet: either a tagged Spendly table or a plain expense list. */
+/** Records from a single CSV/sheet: either a tagged Totalio table or a plain expense list. */
 export function splitTaggedRecords(records: RecordRow[]) {
   const tagged = records.length > 0 && "record_type" in records[0];
   if (!tagged) return { categories: [], expenses: records, settings: [] };
@@ -401,8 +404,8 @@ export function importFromCsvText(text: string, opts: { dateFormat?: string } = 
 
 export function importFromJson(data: unknown): ImportResult {
   const b = data as Backup;
-  if (!b || b.app !== "spendly" || !Array.isArray(b.categories) || !Array.isArray(b.expenses)) {
-    throw new Error("This JSON file is not a Spendly backup.");
+  if (!b || !isAppMarker(b.app) || !Array.isArray(b.categories) || !Array.isArray(b.expenses)) {
+    throw new Error("This JSON file is not a Totalio backup.");
   }
   return { kind: "full", backup: b, errors: [], warnings: [], stats: statsOf(b) };
 }

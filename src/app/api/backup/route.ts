@@ -13,7 +13,7 @@ export const GET = route(async () => {
   return new Response(JSON.stringify(backup, null, 2), {
     headers: {
       "Content-Type": "application/json",
-      "Content-Disposition": `attachment; filename="spendly-backup-${backup.exportedAt.slice(0, 10)}.json"`,
+      "Content-Disposition": `attachment; filename="totalio-backup-${backup.exportedAt.slice(0, 10)}.json"`,
     },
   });
 });

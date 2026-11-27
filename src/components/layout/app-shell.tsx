@@ -46,7 +46,7 @@ function Brand({ compact }: { compact?: boolean }) {
       </span>
       {!compact && (
         <span className="truncate text-[17px] font-semibold tracking-tight">
-          Spend<span className="text-primary">ly</span>
+          Total<span className="text-primary">io</span>
         </span>
       )}
     </Link>
@@ -186,8 +186,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
             <div className="hidden min-w-0 md:block">
               <p className="truncate text-sm text-muted-foreground">
-                Spendly <span className="mx-1.5 text-border">/</span>
-                <span className="font-medium text-foreground">{current?.label ?? "Spendly"}</span>
+                Totalio <span className="mx-1.5 text-border">/</span>
+                <span className="font-medium text-foreground">{current?.label ?? "Totalio"}</span>
               </p>
             </div>
             <div className="ml-auto flex items-center gap-1.5 sm:gap-2">

@@ -1,4 +1,4 @@
-/** Excel + file I/O for Spendly data files (works in the browser and in Node for tests). */
+/** Excel + file I/O for Totalio data files (works in the browser and in Node for tests). */
 import {
   CATEGORY_COLUMNS,
   EXPENSE_COLUMNS,
@@ -38,7 +38,7 @@ const HEADERS: Record<string, string> = {
 export async function backupToXlsx(b: Backup): Promise<ArrayBuffer> {
   const ExcelJS = (await import("exceljs")).default;
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Spendly";
+  wb.creator = "Totalio";
   const { categories, expenses, settings } = backupToRecords(b);
   const sheet = (name: string, cols: readonly string[], rows: Record<string, Cell>[], widths: Record<string, number> = {}) => {
     const ws = wb.addWorksheet(name, { views: [{ state: "frozen", ySplit: 1 }] });
@@ -121,7 +121,7 @@ function download(blob: Blob, filename: string) {
 
 export async function downloadDataFile(format: DataFormat, b: Backup) {
   const stamp = new Date().toISOString().slice(0, 10);
-  const name = `spendly-data-${stamp}`;
+  const name = `totalio-data-${stamp}`;
   if (format === "json") return download(new Blob([JSON.stringify(b, null, 2)], { type: "application/json" }), `${name}.json`);
   if (format === "csv") return download(new Blob([backupToCsv(b)], { type: "text/csv;charset=utf-8" }), `${name}.csv`);
   const buf = await backupToXlsx(b);

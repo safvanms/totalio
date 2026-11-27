@@ -143,7 +143,7 @@ export default function ExpenseHistoryPage() {
         actions={
           <>
             <ImportDataButton label="Import" />
-            <ExportMenu getTables={exportTables} filename="spendly-expenses" heading="Expense history" disabled={!data?.total} />
+            <ExportMenu getTables={exportTables} filename="totalio-expenses" heading="Expense history" disabled={!data?.total} />
             <Button onClick={() => openExpense()}>
               <Plus /> Add expense
             </Button>

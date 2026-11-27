@@ -147,7 +147,7 @@ export function DashboardView() {
         <Card>
           <EmptyState
             icon={Shapes}
-            title="Welcome to Spendly"
+            title="Welcome to Totalio"
             description="Start by creating categories like Train Tickets or Food, then add your expenses. Charts and insights appear automatically."
             action={
               <>

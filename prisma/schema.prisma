@@ -1,4 +1,4 @@
-// Spendly data model.
+// Totalio data model.
 // SQLite for local development; switch `provider` to "postgresql" and update
 // DATABASE_URL to migrate. No SQLite-specific features are used.
 

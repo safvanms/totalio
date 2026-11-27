@@ -332,8 +332,8 @@ export function ReportView() {
       description={`Detailed breakdowns and comparisons · ${labelA}`}
       actions={
         <>
-          <ExportMenu getTables={() => tablesFor(tab)} filename={`spendly-${tab}-report`} heading={`Spendly – ${TABS.find((t) => t.value === tab)?.label} report`} label="Export tab" disabled={!points.length && tab !== "compare"} />
-          <ExportMenu getTables={allTables} filename="spendly-full-report" heading="Spendly – Full report" label="Full report" variant="default" disabled={!categories.length} />
+          <ExportMenu getTables={() => tablesFor(tab)} filename={`totalio-${tab}-report`} heading={`Totalio – ${TABS.find((t) => t.value === tab)?.label} report`} label="Export tab" disabled={!points.length && tab !== "compare"} />
+          <ExportMenu getTables={allTables} filename="totalio-full-report" heading="Totalio – Full report" label="Full report" variant="default" disabled={!categories.length} />
         </>
       }
     >

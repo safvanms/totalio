@@ -6,7 +6,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Spendly", template: "%s · Spendly" },
+  title: { default: "Totalio", template: "%s · Totalio" },
   description: "Personal expense management and analytics, with a visual formula builder for calculated categories.",
 };
 

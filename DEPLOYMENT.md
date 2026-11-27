@@ -1,6 +1,6 @@
-# Deploying Spendly to Vercel
+# Deploying Totalio to Vercel
 
-Spendly is one Next.js app. The pages (frontend) and the API routes (backend) deploy together as a single Vercel project. The only separate piece is the **database**.
+Totalio is one Next.js app. The pages (frontend) and the API routes (backend) deploy together as a single Vercel project. The only separate piece is the **database**.
 
 | | Local | Vercel |
 |---|---|---|
@@ -22,7 +22,7 @@ SQLite can't be used on Vercel because its servers don't keep files: data writte
 
 ## Step 1 – Put the code on GitHub
 
-1. On github.com, click **New repository**. Name it `spendly`, make it **Private**, and do **not** add a README or .gitignore. Click **Create repository**.
+1. On github.com, click **New repository**. Name it `totalio`, make it **Private**, and do **not** add a README or .gitignore. Click **Create repository**.
 2. In a terminal, run:
 
    ```bash
@@ -31,7 +31,7 @@ SQLite can't be used on Vercel because its servers don't keep files: data writte
    git add .
    git commit -m "Initial commit"
    git branch -M main
-   git remote add origin https://github.com/<your-username>/spendly.git
+   git remote add origin https://github.com/<your-username>/totalio.git
    git push -u origin main
    ```
 
@@ -42,7 +42,7 @@ SQLite can't be used on Vercel because its servers don't keep files: data writte
 ## Step 2 – Create the Vercel project
 
 1. On vercel.com, click **Add New… → Project**.
-2. Find the `spendly` repo and click **Import**. If it's missing, click *Adjust GitHub App Permissions* and give Vercel access to it.
+2. Find the `totalio` repo and click **Import**. If it's missing, click *Adjust GitHub App Permissions* and give Vercel access to it.
 3. On the configure screen:
    - **Framework Preset:** Next.js (detected automatically)
    - **Root Directory:** `./`
@@ -61,7 +61,7 @@ SQLite can't be used on Vercel because its servers don't keep files: data writte
 2. Accept the terms. Pick the **Free** plan and a **region close to you** (e.g. *Singapore* or *Mumbai* for India). Click **Create**.
 3. When asked which environments to connect, tick **Production, Preview and Development**, then click **Connect**.
 
-Vercel now adds the connection strings as environment variables. With the Neon integration they are usually named `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (direct). Other `POSTGRES_*` / `PG*` variables may appear too; Spendly doesn't use those.
+Vercel now adds the connection strings as environment variables. With the Neon integration they are usually named `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (direct). Other `POSTGRES_*` / `PG*` variables may appear too; Totalio doesn't use those.
 
 > **Without the integration:** create a project at neon.tech, open **Connection Details**, and copy two strings: one with **Connection pooling** on (the host contains `-pooler`), and one with it off.
 
@@ -71,7 +71,7 @@ Vercel now adds the connection strings as environment variables. With the Neon i
 
 **With the Neon integration from Step 3, there is nothing to do here.** The build script (`scripts/vercel-build.mjs`) and the app pick up the variables the integration created:
 
-| Spendly uses | Taken from (first one that exists) |
+| Totalio uses | Taken from (first one that exists) |
 |---|---|
 | `DATABASE_URL` (pooled) | `DATABASE_URL`, `POSTGRES_PRISMA_URL`, `POSTGRES_URL` |
 | `DIRECT_URL` (direct) | `DIRECT_URL`, `DATABASE_URL_UNPOOLED`, `POSTGRES_URL_NON_POOLING`, else the pooled URL |
@@ -96,7 +96,7 @@ During the build, `npm run vercel-build` will:
 2. create or update the tables in Neon (`prisma db push`), which is safe to run on every deploy,
 3. build Next.js.
 
-When it finishes, click **Visit**. You'll get a URL like `https://spendly-xxxx.vercel.app`.
+When it finishes, click **Visit**. You'll get a URL like `https://totalio-xxxx.vercel.app`.
 
 ---
 
@@ -122,7 +122,7 @@ On the live URL:
 
 ## Step 8 – Protect it (important)
 
-**Spendly has no login.** Anyone who has the URL can view, change, export or delete all your data.
+**Totalio has no login.** Anyone who has the URL can view, change, export or delete all your data.
 
 - Go to **Project → Settings → Deployment Protection** and turn on the strongest option your plan allows (e.g. *Vercel Authentication*, so only you, logged in to Vercel, can open it). Options differ between the Hobby and Pro plans, so check what applies to your production URL.
 - Don't share the URL publicly until proper sign-in is added to the app.
@@ -131,11 +131,36 @@ On the live URL:
 
 ## Optional
 
-- **Custom domain:** Project → Settings → **Domains** → **Add**, then follow the DNS instructions.
+- **Custom domain:** see *Connecting your domain* below.
 - **Function region:** Project → Settings → **Functions** → set the region to the same one as your Neon database. This makes every page noticeably faster.
 - **Automatic deploys:** every `git push` to `main` redeploys production. Pushes to other branches get their own preview URLs.
 
 ---
+
+## Connecting your domain
+
+1. In Vercel, go to **Project → Settings → Domains**, enter your domain (e.g. `totalio.app`), and click **Add**. Add the `www.` version too if you want it; Vercel offers to redirect one to the other.
+2. Vercel shows the exact DNS records to create, usually:
+   - an **A** record for the root domain (`@`), and
+   - a **CNAME** record for `www`.
+
+   Copy the values **from the Vercel screen**, since they can differ per project.
+3. At your domain registrar (GoDaddy, Namecheap, Hostinger, Cloudflare, …), open the domain's **DNS settings**, add those records, and remove any older A/CNAME records for `@` or `www` that point elsewhere.
+4. Wait for the Domains page to show **Valid Configuration**. This takes minutes to a few hours. The HTTPS certificate is issued automatically.
+
+If you bought the domain through Vercel, there's nothing to configure; just add it to the project.
+
+## Renaming an existing deployment (was "Spendly")
+
+If you deployed before the app was renamed to Totalio, none of this is required; the app works either way. For tidiness:
+
+- **GitHub repo:** on GitHub, go to repo **Settings → General → Repository name**, change it to `totalio`, and click **Rename**. GitHub redirects the old URL, but update your local remote:
+  ```bash
+  git remote set-url origin https://github.com/<your-username>/totalio.git
+  ```
+  Vercel follows the rename automatically.
+- **Vercel project:** go to **Project → Settings → General → Project Name** and set it to `totalio`. The `*.vercel.app` URL changes; a custom domain doesn't.
+- **Your data is unaffected:** the database is the same. Export files made under the old name still import.
 
 ## Updating the app later
 

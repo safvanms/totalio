@@ -1,4 +1,4 @@
-// Spendly data model: PRODUCTION (PostgreSQL, used on Vercel).
+// Totalio data model: PRODUCTION (PostgreSQL, used on Vercel).
 // Keep in sync with prisma/schema.prisma (SQLite, local development).
 // Only the datasource block differs.
 
