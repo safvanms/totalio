@@ -40,8 +40,15 @@ function useActive() {
 }
 
 function Brand({ compact }: { compact?: boolean }) {
+
   return (
-    <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    <div className="flex min-w-0 items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    onClick={() => {
+      // Navigate to the dashboard when the brand is clicked
+      window.location.href = "/dashboard";
+      window.history.replaceState(null, "", "/dashboard");
+    }}
+    >
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-violet-500 to-violet-600 text-white shadow-glow">
         <Wallet className="h-[18px] w-[18px]" />
       </span>
@@ -50,7 +57,7 @@ function Brand({ compact }: { compact?: boolean }) {
           Total<span className="text-primary">io</span>
         </span>
       )}
-    </Link>
+    </div>
   );
 }
 

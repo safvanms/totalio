@@ -40,17 +40,17 @@
   .dark {
     --background: 228 28% 6%;
     --foreground: 220 20% 94%;
-    --card: 228 24% 9.5%;
+    --card: 228 20% 12%;
     --card-foreground: 220 20% 94%;
-    --popover: 228 24% 10.5%;
+    --popover: 228 20% 13.5%;
     --popover-foreground: 220 20% 94%;
     --primary: 243 85% 68%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 228 20% 15%;
+    --secondary: 228 18% 17%;
     --secondary-foreground: 220 20% 90%;
-    --muted: 228 18% 14%;
+    --muted: 228 17% 16.5%;
     --muted-foreground: 220 12% 64%;
-    --accent: 243 30% 18%;
+    --accent: 243 30% 20%;
     --accent-foreground: 240 80% 86%;
     --success: 158 64% 48%;
     --success-foreground: 160 80% 8%;
@@ -58,16 +58,16 @@
     --warning-foreground: 30 80% 10%;
     --destructive: 0 72% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 228 16% 17%;
-    --input: 228 16% 21%;
+    --border: 228 15% 20%;
+    --input: 228 15% 24%;
     --ring: 243 85% 68%;
     --sidebar: 228 26% 8%;
     --sidebar-foreground: 220 14% 76%;
     --sidebar-accent: 243 30% 17%;
     --sidebar-border: 228 16% 15%;
-    --chart-grid: 228 14% 17%;
+    --chart-grid: 228 14% 19%;
     --chart-axis: 220 10% 62%;
-    --chart-surface: 228 24% 9.5%;
+    --chart-surface: 228 20% 12%;
   }
 
   * {
@@ -120,4 +120,25 @@
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* iOS Safari gives native date inputs an intrinsic min-width and centred
+   text, which makes them overflow narrow rows and dialogs. */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+  display: block;
+  width: 100%;
+}
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+  min-height: 1.25rem;
+}
+input[type="date"]::-webkit-datetime-edit {
+  padding: 0;
 }

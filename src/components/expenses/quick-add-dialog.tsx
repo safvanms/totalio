@@ -123,21 +123,27 @@ export function QuickAddDialog() {
               {rows.map((r, idx) => {
                 const e = errors[r.key] ?? {};
                 return (
-                  <li key={r.key} className="grid grid-cols-2 gap-2 p-3 md:grid-cols-[minmax(0,1fr)_9rem_10rem_2.5rem] md:items-start md:py-2">
-                    <div className="col-span-2 md:col-span-1">
-                      <label className="sr-only" htmlFor={`qa-${r.key}-particular`}>
-                        Particular
-                      </label>
-                      <Input
-                        id={`qa-${r.key}-particular`}
-                        placeholder={`Particular ${idx + 1}`}
-                        value={r.particular}
-                        maxLength={120}
-                        aria-invalid={!!e.particular}
-                        onChange={(ev) => update(r.key, { particular: ev.target.value })}
-                        onKeyDown={(ev) => onKeyDown(ev, idx)}
-                      />
-                      {e.particular && <p className="mt-1 text-xs text-destructive">{e.particular}</p>}
+                  <li key={r.key} className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-2 p-3 [&>*]:min-w-0 md:grid-cols-[minmax(0,1fr)_9rem_10rem_2.5rem] md:items-start md:py-2">
+                    {/* Phones: delete sits beside the particular so amount + date get half the row each. */}
+                    <div className="col-span-2 flex items-start gap-2 md:col-span-1 md:block">
+                      <div className="min-w-0 flex-1">
+                        <label className="sr-only" htmlFor={`qa-${r.key}-particular`}>
+                          Particular
+                        </label>
+                        <Input
+                          id={`qa-${r.key}-particular`}
+                          placeholder={`Particular ${idx + 1}`}
+                          value={r.particular}
+                          maxLength={120}
+                          aria-invalid={!!e.particular}
+                          onChange={(ev) => update(r.key, { particular: ev.target.value })}
+                          onKeyDown={(ev) => onKeyDown(ev, idx)}
+                        />
+                        {e.particular && <p className="mt-1 text-xs text-destructive">{e.particular}</p>}
+                      </div>
+                      <Button type="button" variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive md:hidden" onClick={() => removeRow(r.key)} aria-label="Remove row">
+                        <Trash2 />
+                      </Button>
                     </div>
                     <div>
                       <div className="relative">
@@ -158,20 +164,15 @@ export function QuickAddDialog() {
                       </div>
                       {e.amount && <p className="mt-1 text-xs text-destructive">{e.amount}</p>}
                     </div>
-                    <div className="flex gap-2">
-                      <div className="min-w-0 flex-1">
-                        <Input
-                          aria-label="Date"
-                          type="date"
-                          value={r.expenseDate}
-                          aria-invalid={!!e.expenseDate}
-                          onChange={(ev) => update(r.key, { expenseDate: ev.target.value })}
-                        />
-                        {e.expenseDate && <p className="mt-1 text-xs text-destructive">{e.expenseDate}</p>}
-                      </div>
-                      <Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive md:hidden" onClick={() => removeRow(r.key)} aria-label="Remove row">
-                        <Trash2 />
-                      </Button>
+                    <div>
+                      <Input
+                        aria-label="Date"
+                        type="date"
+                        value={r.expenseDate}
+                        aria-invalid={!!e.expenseDate}
+                        onChange={(ev) => update(r.key, { expenseDate: ev.target.value })}
+                      />
+                      {e.expenseDate && <p className="mt-1 text-xs text-destructive">{e.expenseDate}</p>}
                     </div>
                     <Button type="button" variant="ghost" size="icon" className="hidden text-muted-foreground hover:text-destructive md:inline-flex" onClick={() => removeRow(r.key)} aria-label="Remove row">
                       <Trash2 />

@@ -75,6 +75,7 @@ export default function CategoriesPage() {
       <PageHeader
         title="Categories"
         description="Organise expenses into categories, and combine them into calculated categories with formulas."
+        actionsClassName="grid grid-cols-2 sm:flex"
         actions={
           <>
             <Button variant="outline" onClick={() => openCategory({ type: "CALCULATED" })} disabled={!normalCount}>
@@ -86,8 +87,8 @@ export default function CategoriesPage() {
           </>
         }
       >
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2.5 sm:gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
             <div className="relative min-w-0 sm:w-64">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search categories" className="pl-9 pr-9" aria-label="Search categories" />
@@ -97,9 +98,21 @@ export default function CategoriesPage() {
                 </button>
               )}
             </div>
-            <div className="flex gap-2">
+            <Segmented
+              ariaLabel="Category type"
+              value={type}
+              onChange={setType}
+              className="grid w-full grid-cols-3 sm:order-last sm:inline-flex sm:w-auto"
+              options={[
+                { value: "all", label: "All" },
+                { value: "NORMAL", label: "Normal" },
+                { value: "CALCULATED", label: "Calculated" },
+              ]}
+            />
+            {/* Phones: sort + direction, then the date range (same row from 425px). */}
+            <div className="flex min-w-0 flex-wrap items-center gap-2 xs:flex-nowrap">
               <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-                <SelectTrigger className="min-w-0 flex-1 sm:w-44" aria-label="Sort by">
+                <SelectTrigger className="min-w-0 flex-1 sm:w-44 sm:flex-none" aria-label="Sort by">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -110,22 +123,13 @@ export default function CategoriesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="icon" onClick={() => setAsc((a) => !a)} aria-label={asc ? "Ascending" : "Descending"}>
+              <Button variant="outline" size="icon" className="shrink-0" onClick={() => setAsc((a) => !a)} aria-label={asc ? "Ascending" : "Descending"}>
                 {asc ? <ArrowUpNarrowWide /> : <ArrowDownWideNarrow />}
               </Button>
+              <DateRangeFilter state={rangeState} range={range} onChange={setRange} className="w-full min-w-0 xs:w-auto xs:flex-1 sm:hidden" />
             </div>
-            <Segmented
-              ariaLabel="Category type"
-              value={type}
-              onChange={setType}
-              options={[
-                { value: "all", label: "All" },
-                { value: "NORMAL", label: "Normal" },
-                { value: "CALCULATED", label: "Calculated" },
-              ]}
-            />
           </div>
-          <DateRangeFilter state={rangeState} range={range} onChange={setRange} />
+          <DateRangeFilter state={rangeState} range={range} onChange={setRange} className="hidden sm:flex" />
         </div>
       </PageHeader>
 

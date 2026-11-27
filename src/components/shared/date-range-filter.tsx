@@ -65,7 +65,9 @@ export function DateRangeFilter({
         <div className={cn("flex min-w-0 items-center gap-2", phoneLeading ? "justify-end" : "flex-1")}>
         <Select
           value={state.preset}
-          onValueChange={(v) => (v === "custom" ? openCustom(true) : onChange({ preset: v as RangePreset, from: null, to: null }))}
+          // Open the calendar after the select has fully closed and returned focus,
+          // otherwise that focus move counts as "outside" and closes it at once.
+          onValueChange={(v) => (v === "custom" ? setTimeout(() => openCustom(true), 50) : onChange({ preset: v as RangePreset, from: null, to: null }))}
         >
           <SelectTrigger aria-label="Date range" className={cn(phoneLeading && "w-[10.5rem] xs:w-44")}>
             <CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -119,7 +121,12 @@ export function DateRangeFilter({
         </PopoverTrigger>
       </div>
       </PopoverAnchor>
-        <PopoverContent align="end" className="w-auto p-3">
+        <PopoverContent
+          align="end"
+          className="w-auto p-3"
+          // Only an explicit tap outside (or Cancel/Esc) closes it, never a focus shuffle.
+          onFocusOutside={(e) => e.preventDefault()}
+        >
           <Calendar
             mode="range"
             selected={draft}

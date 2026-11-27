@@ -168,6 +168,12 @@ The sign-up page then says sign-ups are closed. Existing accounts keep working. 
 
 If you bought the domain through Vercel, there's nothing to configure; just add it to the project.
 
+### Link previews (WhatsApp, iMessage, Slack)
+
+Pasting your site link shows the Totalio logo, title and a preview image. The image URL must be absolute, so add **`NEXT_PUBLIC_SITE_URL`** = `https://your-domain` in **Settings → Environment Variables** and redeploy. Without it, the Vercel production domain is used.
+
+WhatsApp caches previews for each URL. If you shared the link before this was set up, it keeps the old (empty) preview for a while. Test with a fresh variant such as `https://your-domain/?v=2`.
+
 ## Renaming an existing deployment (was "Spendly")
 
 If you deployed before the app was renamed to Totalio, none of this is required; the app works either way. For tidiness:

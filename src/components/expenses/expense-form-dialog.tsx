@@ -114,7 +114,7 @@ export function ExpenseFormDialog() {
               <DialogTitle>{editing ? "Edit expense" : "Add expense"}</DialogTitle>
               <DialogDescription>{editing ? "Changes update every total, chart and formula instantly." : "Record a single expense entry."}</DialogDescription>
             </DialogHeader>
-            <DialogBody className="grid gap-4 pb-5 sm:grid-cols-2">
+            <DialogBody className="grid grid-cols-1 gap-4 pb-5 sm:grid-cols-2 [&>*]:min-w-0">
               <Field label="Category" error={err.categoryId?.message} required className="sm:col-span-2">
                 <Controller
                   control={form.control}

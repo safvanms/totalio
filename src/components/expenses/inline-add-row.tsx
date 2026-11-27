@@ -44,7 +44,7 @@ export function InlineAddRow({ categoryId }: { categoryId: string }) {
 
   return (
     <form onSubmit={submit} className="border-t bg-muted/30 px-4 py-3" aria-label="Quick add expense">
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-[minmax(0,1fr)_9rem_10rem_auto]">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-[minmax(0,1fr)_9rem_10rem_auto] [&>*]:min-w-0">
         <Input
           ref={ref}
           className="col-span-2 md:col-span-1"
