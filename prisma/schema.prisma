@@ -1,0 +1,78 @@
+// Spendly data model.
+// SQLite for local development; switch `provider` to "postgresql" and update
+// DATABASE_URL to migrate. No SQLite-specific features are used.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  /// Short, stable reference code shown in formulas (C1, C2, ...)
+  code        String   @unique
+  name        String
+  description String?
+  color       String
+  icon        String
+  /// "NORMAL" | "CALCULATED" (validated in the application layer)
+  type        String   @default("NORMAL")
+  /// JSON-encoded FormulaToken[] for calculated categories; null otherwise
+  formula     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  expenses Expense[]
+  /// Categories this (calculated) category references in its formula
+  dependsOn  CategoryDependency[] @relation("DependentCategory")
+  /// Calculated categories that reference this category
+  dependents CategoryDependency[] @relation("ReferencedCategory")
+
+  @@index([type])
+  @@index([name])
+}
+
+/// Edge in the formula dependency graph. Kept in sync with Category.formula on save.
+/// onDelete: Restrict on the referenced side prevents deleting a category that a formula uses.
+model CategoryDependency {
+  categoryId   String
+  referencesId String
+  category     Category @relation("DependentCategory", fields: [categoryId], references: [id], onDelete: Cascade)
+  references   Category @relation("ReferencedCategory", fields: [referencesId], references: [id], onDelete: Restrict)
+
+  @@id([categoryId, referencesId])
+  @@index([referencesId])
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  particular  String
+  /// Major currency units, rounded to 2 decimals. Sums are done in minor units.
+  amount      Float
+  /// Calendar date stored as UTC midnight
+  expenseDate DateTime
+  description String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([categoryId, expenseDate])
+  @@index([expenseDate])
+  @@index([particular])
+}
+
+/// Single-row application settings
+model Setting {
+  id                String   @id @default("singleton")
+  currency          String   @default("INR")
+  dateFormat        String   @default("dd MMM yyyy")
+  /// JSON-encoded DashboardPreferences
+  dashboard         String   @default("{}")
+  updatedAt         DateTime @updatedAt
+}
