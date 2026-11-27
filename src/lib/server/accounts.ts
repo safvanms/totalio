@@ -38,7 +38,8 @@ export async function signup(input: unknown): Promise<SessionUser & { claimed: n
   });
 
   await startSession(result.user.id);
-  return { id: result.user.id, email: result.user.email, name: result.user.name, claimed: result.claimed };
+  const u = result.user;
+  return { id: u.id, email: u.email, name: u.name, viaAdmin: false, claimed: result.claimed };
 }
 
 const INVALID = "Incorrect email or password.";
@@ -48,6 +49,13 @@ export async function login(input: unknown): Promise<SessionUser> {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
     await verifyPassword(password, await dummyHash()); // same timing as a real check
+    throw new HttpError(401, INVALID);
+  }
+  if (user.suspended) {
+    // Only revealed after the password is verified, so it can't be used to probe emails.
+    if (await verifyPassword(password, user.passwordHash)) {
+      throw new HttpError(403, "This account has been suspended. Contact the site administrator.");
+    }
     throw new HttpError(401, INVALID);
   }
   if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
@@ -72,13 +80,13 @@ export async function login(input: unknown): Promise<SessionUser> {
     await prisma.user.update({ where: { id: user.id }, data: { failedLogins: 0, lockedUntil: null } });
   }
   await startSession(user.id);
-  return { id: user.id, email: user.email, name: user.name };
+  return { id: user.id, email: user.email, name: user.name, viaAdmin: false };
 }
 
 export async function updateName(user: SessionUser, input: unknown): Promise<SessionUser> {
   const name = nameSchema.parse((input as { name?: unknown })?.name);
   const u = await prisma.user.update({ where: { id: user.id }, data: { name } });
-  return { id: u.id, email: u.email, name: u.name };
+  return { id: u.id, email: u.email, name: u.name, viaAdmin: user.viaAdmin };
 }
 
 /** Changes the password and signs out every other device. */
@@ -101,12 +109,17 @@ export async function deleteAccount(user: SessionUser, input: unknown) {
   const { password } = deleteAccountSchema.parse(input);
   const row = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
   if (!(await verifyPassword(password, row.passwordHash))) throw new HttpError(400, "Your password is incorrect.");
-  await prisma.$transaction([
-    prisma.categoryDependency.deleteMany({ where: { category: { userId: user.id } } }),
-    prisma.expense.deleteMany({ where: { userId: user.id } }),
-    prisma.category.deleteMany({ where: { userId: user.id } }),
-    prisma.setting.deleteMany({ where: { userId: user.id } }),
-    prisma.user.delete({ where: { id: user.id } }),
-  ]);
+  await purgeUser(user.id);
   await endSession();
+}
+
+/** Deletes a user and everything they own, in one transaction. */
+export async function purgeUser(userId: string) {
+  await prisma.$transaction([
+    prisma.categoryDependency.deleteMany({ where: { category: { userId } } }),
+    prisma.expense.deleteMany({ where: { userId } }),
+    prisma.category.deleteMany({ where: { userId } }),
+    prisma.setting.deleteMany({ where: { userId } }),
+    prisma.user.delete({ where: { id: userId } }),
+  ]);
 }

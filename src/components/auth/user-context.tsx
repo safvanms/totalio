@@ -6,6 +6,8 @@ export interface CurrentUser {
   id: string;
   email: string;
   name: string;
+  /** Opened by the site admin ("Open their account"). */
+  viaAdmin: boolean;
 }
 
 const UserContext = createContext<CurrentUser | null>(null);

@@ -24,6 +24,7 @@ import { UserMenu } from "./user-menu";
 import { useUiStore } from "@/stores/ui-store";
 import { useDialogs } from "@/stores/dialog-store";
 import { GlobalDialogs } from "./global-dialogs";
+import { useUser } from "@/components/auth/user-context";
 
 const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -63,9 +64,10 @@ function Brand({ compact }: { compact?: boolean }) {
 
 function NavLinks({ compact, onNavigate }: { compact?: boolean; onNavigate?: () => void }) {
   const isActive = useActive();
+  const nav = NAV;
   return (
     <nav aria-label="Main" className="flex flex-col gap-1">
-      {NAV.map(({ href, label, icon: Icon }) => {
+      {nav.map(({ href, label, icon: Icon }) => {
         const active = isActive(href);
         const link = (
           <Link
@@ -116,10 +118,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const setMobileOpen = useUiStore((s) => s.setMobileNavOpen);
   const openExpense = useDialogs((s) => s.openExpense);
   const pathname = usePathname();
+  const nav = NAV;
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const isCollapsed = mounted && collapsed;
-  const current = NAV.find((n) => pathname === n.href || pathname.startsWith(`${n.href}/`));
+  const current = nav.find((n) => pathname === n.href || pathname.startsWith(`${n.href}/`));
 
   return (
     <div className="flex min-h-dvh">
@@ -184,6 +187,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </Sheet>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        <AdminViewBanner />
         <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
           <div className="mx-auto flex h-16 w-full max-w-[1600px] items-center gap-2 px-4 sm:gap-3 sm:px-6 lg:px-8">
             <Button variant="ghost" size="icon" className="-ml-2 md:hidden" onClick={() => setMobileOpen(true)} aria-label="Open navigation">
@@ -211,6 +215,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="mx-auto w-full min-w-0 max-w-[1600px] flex-1 px-4 pb-16 pt-5 sm:px-6 sm:pt-6 lg:px-8 lg:pt-8">{children}</main>
       </div>
       <GlobalDialogs />
+    </div>
+  );
+}
+
+/** Shown while the site admin is inside this account via "Open their account". */
+function AdminViewBanner() {
+  const user = useUser();
+  const [leaving, setLeaving] = useState(false);
+  if (!user.viaAdmin) return null;
+  const leave = async () => {
+    setLeaving(true);
+    await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+    window.location.assign(`/admin/users/${user.id}`);
+  };
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 bg-amber-500 px-4 py-2 text-center text-[13px] font-medium text-amber-950" role="status">
+      <span>
+        Admin view: you&apos;re inside <strong>{user.name}</strong>&apos;s account ({user.email}). Changes affect their real data.
+      </span>
+      <button
+        type="button"
+        onClick={leave}
+        disabled={leaving}
+        className="rounded-md bg-amber-950/90 px-2.5 py-1 text-xs font-semibold text-amber-50 hover:bg-amber-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-950 disabled:opacity-70"
+      >
+        {leaving ? "Leaving…" : "Back to admin"}
+      </button>
     </div>
   );
 }

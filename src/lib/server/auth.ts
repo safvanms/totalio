@@ -9,16 +9,20 @@ export const SESSION_COOKIE = "totalio_session";
 const SESSION_DAYS = 30;
 /** Sessions are extended when used and closer than this to expiry. */
 const RENEW_WITHIN_DAYS = 15;
+/** "Open their account" sessions started from /admin are short and never renewed. */
+const ADMIN_VIEW_HOURS = 2;
 
 export interface SessionUser {
   id: string;
   email: string;
   name: string;
+  /** This session was opened by the admin, not by the user signing in. */
+  viaAdmin: boolean;
 }
 
-const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
+export const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 
-function cookieOptions(expires: Date) {
+export function cookieOptions(expires: Date) {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -28,12 +32,19 @@ function cookieOptions(expires: Date) {
   };
 }
 
-/** Creates a session row and sets the cookie. */
-export async function startSession(userId: string) {
+/**
+ * Creates a session row and sets the cookie. `viaAdmin` sessions (the admin
+ * opening someone's account) are short-lived and don't count as a sign-in.
+ */
+export async function startSession(userId: string, opts: { viaAdmin?: boolean } = {}) {
   const token = randomBytes(32).toString("base64url");
-  const expiresAt = new Date(Date.now() + SESSION_DAYS * 86_400_000);
+  const expiresAt = new Date(Date.now() + (opts.viaAdmin ? ADMIN_VIEW_HOURS * 3_600_000 : SESSION_DAYS * 86_400_000));
   const ua = (await headers()).get("user-agent")?.slice(0, 200) ?? null;
-  await prisma.session.create({ data: { tokenHash: sha256(token), userId, expiresAt, userAgent: ua } });
+  const create = prisma.session.create({
+    data: { tokenHash: sha256(token), userId, expiresAt, userAgent: ua, viaAdmin: !!opts.viaAdmin },
+  });
+  if (opts.viaAdmin) await create;
+  else await prisma.$transaction([create, prisma.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } })]);
   (await cookies()).set(SESSION_COOKIE, token, cookieOptions(expiresAt));
 }
 
@@ -55,14 +66,14 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   if (!token || token.length > 100) return null;
   const session = await prisma.session.findUnique({
     where: { tokenHash: sha256(token) },
-    include: { user: { select: { id: true, email: true, name: true } } },
+    include: { user: { select: { id: true, email: true, name: true, suspended: true } } },
   });
-  if (!session) return null;
+  if (!session || session.user.suspended) return null;
   if (session.expiresAt.getTime() < Date.now()) {
     await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
     return null;
   }
-  if (session.expiresAt.getTime() - Date.now() < RENEW_WITHIN_DAYS * 86_400_000) {
+  if (!session.viaAdmin && session.expiresAt.getTime() - Date.now() < RENEW_WITHIN_DAYS * 86_400_000) {
     const expiresAt = new Date(Date.now() + SESSION_DAYS * 86_400_000);
     await prisma.session.update({ where: { id: session.id }, data: { expiresAt } }).catch(() => {});
     try {
@@ -71,7 +82,8 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
       /* cookies are read-only while rendering a page; the API will renew it */
     }
   }
-  return session.user;
+  const { id, email, name } = session.user;
+  return { id, email, name, viaAdmin: session.viaAdmin };
 });
 
 /** For API routes: the signed-in user, or a 401. */

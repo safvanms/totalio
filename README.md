@@ -23,6 +23,7 @@ Other scripts: `npm run build`, `npm start`, `npm test` (unit tests), `npm run t
 - App pages live in the `src/app/(app)` route group, whose server layout redirects to `/login` without a valid session. Sign-in pages are in `src/app/(auth)`.
 - Data stored before accounts existed has `userId = null` and is claimed by the first account created.
 - Set `ALLOW_SIGNUPS=false` to close registration (the first account can always be created).
+- **Admin area** at `/admin` (unlinked; `src/app/admin`, `src/lib/server/admin*.ts`, `/api/admin/*` via `adminRoute()`). It has its own sign-in, configured with `ADMIN_USERNAME` / `ADMIN_PASSWORD` and stored in an `AdminSession` table, with a per-IP lockout. The admin can view, edit, reset passwords for, unlock, suspend and delete users, download a user's data, and "Open their account" (a 2-hour session marked `viaAdmin`, shown with a banner in the app).
 
 Sample data is optional. Settings → *Delete all data* gives you an empty app; *Load sample data* restores the demo set.
 

@@ -23,6 +23,12 @@ model User {
   /// Brute-force protection
   failedLogins Int       @default(0)
   lockedUntil  DateTime?
+  /// Unused: admin access is a separate login now (ADMIN_USERNAME/ADMIN_PASSWORD).
+  /// Kept so databases that already have it upgrade without a destructive migration.
+  isAdmin      Boolean  @default(false)
+  /// Suspended accounts can't sign in; their sessions are ended.
+  suspended    Boolean  @default(false)
+  lastLoginAt  DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -41,6 +47,8 @@ model Session {
   expiresAt DateTime
   createdAt DateTime @default(now())
   userAgent String?
+  /// Opened by the admin with "Open their account" (not a real sign-in by the user)
+  viaAdmin  Boolean  @default(false)
 
   @@index([userId])
 }
@@ -121,4 +129,22 @@ model Setting {
   /// JSON-encoded DashboardPreferences
   dashboard  String   @default("{}")
   updatedAt  DateTime @updatedAt
+}
+
+/// Sign-ins to the /admin area (separate from user accounts).
+model AdminSession {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?
+}
+
+/// Failed /admin sign-ins, used to lock out repeated guessing per IP.
+model AdminLoginFailure {
+  id        String   @id @default(cuid())
+  ip        String
+  createdAt DateTime @default(now())
+
+  @@index([ip, createdAt])
 }

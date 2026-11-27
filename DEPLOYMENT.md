@@ -137,7 +137,33 @@ The sign-up page then says sign-ups are closed. Existing accounts keep working. 
 
 **Account management** (each user, under **Settings → Account**): change name, change password (signs out other devices), sign out of other devices, delete account (removes all of that user's data).
 
-**Forgotten passwords:** there's no email-based reset yet, because that needs an email-sending service. Until then, an affected user can create a new account. Their old data stays tied to the old account, so encourage everyone to keep an export as a backup.
+**Forgotten passwords:** there's no email-based reset yet. The admin can set a new password from `/admin` (below) and share it with the person privately.
+
+### Admin dashboard
+
+The admin area is at **`https://your-domain/admin`**. It isn't linked anywhere in the app, and it has its own sign-in, separate from user accounts.
+
+**Turn it on:** in **Settings → Environment Variables**, add these two variables, then redeploy:
+
+| Name | Value |
+|---|---|
+| `ADMIN_USERNAME` | the admin username, e.g. `TotalioAdmin` |
+| `ADMIN_PASSWORD` | a long, unique password |
+
+Without both, `/admin` just says "Admin isn't set up". The values live only in Vercel, never in the code or on GitHub. To change the admin password, edit the variable and redeploy.
+
+What the admin can do, for every user:
+- **See** their profile, status, signed-in devices, categories with totals, latest expenses, and usage stats. **Download data** exports all of the user's data as a backup file (it can be imported in Settings).
+- **Edit** their name and email.
+- **Set a new password**, typed or generated. It's shown once to copy, and the user is signed out everywhere. The current password can never be shown, because passwords are stored one-way encrypted.
+- **Open their account:** go into the app as that user to view or change anything. A yellow banner shows while you're inside, with **Back to admin**. These sessions expire after 2 hours and don't count as the user signing in.
+- **Unlock** a locked account, **sign out** one device or all of them, **suspend** or reactivate the account, and **delete** it with all its data. You retype the email to confirm a delete.
+
+Admin security:
+- Admin sessions last 12 hours.
+- Five wrong admin sign-ins from the same network lock it out for 15 minutes.
+- The credentials are compared in constant time.
+- Admin pages are marked "noindex" so search engines don't list them.
 
 **Security details:**
 - Passwords are hashed with scrypt.

@@ -31,9 +31,15 @@ export async function api<T>(url: string, init: RequestInit & { json?: unknown }
   }
   if (!res.ok) {
     // Session missing or expired: go to sign-in (auth endpoints report their own 401s).
-    if (res.status === 401 && !url.startsWith("/api/auth/") && typeof window !== "undefined") {
-      window.location.assign("/login?reason=expired");
-      return new Promise<T>(() => {}); // never settles; the page is navigating away
+    if (res.status === 401 && typeof window !== "undefined") {
+      if (url.startsWith("/api/admin/") && url !== "/api/admin/login") {
+        window.location.reload(); // admin session expired: the admin area shows its sign-in again
+        return new Promise<T>(() => {});
+      }
+      if (!url.startsWith("/api/auth/") && !url.startsWith("/api/admin/")) {
+        window.location.assign("/login?reason=expired");
+        return new Promise<T>(() => {}); // never settles; the page is navigating away
+      }
     }
     const msg = (data as { error?: string } | null)?.error ?? `Request failed (${res.status})`;
     throw new ApiRequestError(res.status, msg, (data as { details?: unknown } | null)?.details);

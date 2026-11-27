@@ -142,3 +142,28 @@ export const backupSchema = z.object({
     .max(500000),
 });
 export type Backup = z.infer<typeof backupSchema>;
+
+/* Admin -------------------------------------------------------------- */
+
+export const adminListQuerySchema = z.object({
+  q: z.string().trim().max(120).optional().default(""),
+  filter: z.enum(["all", "suspended", "locked", "active", "inactive"]).optional().default("all"),
+  sort: z.enum(["newest", "oldest", "name", "lastLogin", "expenses"]).optional().default("newest"),
+  page: z.coerce.number().int().min(1).max(10_000).optional().default(1),
+  pageSize: z.coerce.number().int().min(5).max(100).optional().default(20),
+});
+
+export const adminUpdateUserSchema = z
+  .object({ name: nameSchema.optional(), email: emailSchema.optional() })
+  .refine((v) => v.name !== undefined || v.email !== undefined, "Nothing to update");
+
+export const adminSetPasswordSchema = z.object({ newPassword: newPasswordSchema });
+export const adminDeleteUserSchema = z.object({ confirmEmail: z.string().trim().toLowerCase().max(254) });
+
+export type AdminUpdateUserInput = z.infer<typeof adminUpdateUserSchema>;
+
+export const adminLoginSchema = z.object({
+  username: z.string().min(1, "Enter the username").max(100),
+  password: z.string().min(1, "Enter the password").max(200),
+});
+export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
