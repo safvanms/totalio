@@ -8,6 +8,7 @@ import { Badge, Card, Input, Skeleton } from "@/components/ui/primitives";
 import { Segmented, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CategoryIcon, EmptyState, ErrorState, PageHeader } from "@/components/shared/common";
 import { DateRangeFilter } from "@/components/shared/date-range-filter";
+import { LinkPendingOverlay } from "@/components/shared/link-pending";
 import { CategoryActions } from "@/components/categories/category-actions";
 import { useCategories, useExpensePoints } from "@/hooks/use-data";
 import { useDateRange } from "@/hooks/use-date-range";
@@ -172,6 +173,7 @@ export default function CategoriesPage() {
                     <div className="min-w-0 flex-1">
                       <Link href={`/categories/${c.id}`} className="block truncate font-semibold after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none" title={c.name}>
                         {c.name}
+                        <LinkPendingOverlay />
                       </Link>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
                         <span className="font-mono text-[11px] text-muted-foreground">{c.code}</span>

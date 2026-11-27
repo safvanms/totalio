@@ -52,10 +52,12 @@ const config: Config = {
       keyframes: {
         "fade-in": { from: { opacity: "0", transform: "translateY(4px)" }, to: { opacity: "1", transform: "translateY(0)" } },
         "pop-in": { "0%": { opacity: "0", transform: "scale(0.85)" }, "100%": { opacity: "1", transform: "scale(1)" } },
+        "nav-progress": { "0%": { transform: "scaleX(0.05)" }, "100%": { transform: "scaleX(0.9)" } },
       },
       animation: {
         "fade-in": "fade-in 0.3s ease-out both",
         "pop-in": "pop-in 0.18s ease-out both",
+        "nav-progress": "nav-progress 8s cubic-bezier(0.1, 0.75, 0.2, 1) forwards",
       },
     },
   },

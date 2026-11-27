@@ -101,7 +101,8 @@
     text-wrap: balance;
   }
   .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    /* Never less than 1rem; on notched phones, clear the home indicator too. */
+    padding-bottom: max(1rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem));
   }
 }
 

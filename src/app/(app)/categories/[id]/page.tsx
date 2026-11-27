@@ -3,7 +3,7 @@
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Calculator, Hash, Layers, Pencil, Plus, Receipt, Sigma, Trash2, TrendingUp, Wallet, Zap } from "lucide-react";
+import { ArrowLeft, Calculator, Hash, Layers, Loader2, Pencil, Plus, Receipt, Sigma, Trash2, TrendingUp, Wallet, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton, Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/primitives";
 import { CategoryIcon, CategoryLabel, EmptyState, ErrorState, StatCard } from "@/components/shared/common";
@@ -11,6 +11,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DateRangeFilter } from "@/components/shared/date-range-filter";
 import { Pagination } from "@/components/shared/pagination";
 import { DeleteCategoryDialog } from "@/components/categories/category-actions";
+import { CategoryDetailSkeleton, CategoryStatsSkeleton } from "@/components/categories/category-detail-skeleton";
 import { ExpenseTable, type SortKey, type SortState } from "@/components/expenses/expense-table";
 import { InlineAddRow } from "@/components/expenses/inline-add-row";
 import { TokenChip } from "@/components/formula/token-chip";
@@ -21,7 +22,7 @@ import { useFormat } from "@/hooks/use-settings";
 import { categoryValues, formulaBreakdown, totalOf } from "@/lib/analytics";
 import { describeRange } from "@/lib/dates";
 import { formulaToString } from "@/lib/formula";
-import { formatPercent, pluralize } from "@/lib/utils";
+import { cn, formatPercent, pluralize } from "@/lib/utils";
 import { useDialogs } from "@/stores/dialog-store";
 import type { Category, DateRange, Expense, ExpensePoint } from "@/lib/types";
 
@@ -30,26 +31,14 @@ export default function CategoryDetailPage({ params }: { params: Promise<{ id: s
   const router = useRouter();
   const { data: categories, isLoading, error, refetch } = useCategories();
   const { state: rangeState, range, setState: setRange } = useDateRange("category");
-  const { data: points = [] } = useExpensePoints(range);
+  const { data: points = [], isLoading: pointsLoading, isFetching: pointsFetching } = useExpensePoints(range);
   const { openCategory, openExpense, openQuickAdd } = useDialogs();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const all = useMemo(() => categories ?? [], [categories]);
   const category = all.find((c) => c.id === id);
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-16 w-80 max-w-full" />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 rounded-xl" />
-          ))}
-        </div>
-        <Skeleton className="h-80 rounded-xl" />
-      </div>
-    );
-  }
+  if (isLoading) return <CategoryDetailSkeleton />;
   if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
   if (!category) {
     return (
@@ -124,14 +113,27 @@ export default function CategoryDetailPage({ params }: { params: Promise<{ id: s
       </div>
 
       <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm font-medium text-muted-foreground">Period</p>
+        <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          Period
+          {pointsFetching && !pointsLoading && (
+            <span className="inline-flex items-center gap-1.5 text-xs font-normal" role="status">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Updating…
+            </span>
+          )}
+        </p>
         <DateRangeFilter state={rangeState} range={range} onChange={setRange} />
       </div>
 
-      {category.type === "NORMAL" ? (
-        <NormalDetail category={category} all={all} points={points} range={range} />
+      {pointsLoading ? (
+        <CategoryStatsSkeleton />
       ) : (
-        <CalculatedDetail category={category} all={all} points={points} range={range} />
+        <div className={cn("transition-opacity duration-200", pointsFetching && "opacity-60")} aria-busy={pointsFetching}>
+          {category.type === "NORMAL" ? (
+            <NormalDetail category={category} all={all} points={points} range={range} />
+          ) : (
+            <CalculatedDetail category={category} all={all} points={points} range={range} />
+          )}
+        </div>
       )}
 
       {dependents.length > 0 && (

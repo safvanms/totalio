@@ -81,8 +81,10 @@ export function CategoryActions({ category, align = "end" }: { category: Categor
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align={align} onClick={(e) => e.stopPropagation()}>
-          <DropdownMenuItem onClick={() => router.push(`/categories/${category.id}`)}>
-            <Eye /> View details
+          <DropdownMenuItem asChild>
+            <Link href={`/categories/${category.id}`}>
+              <Eye /> View details
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openCategory({ category })}>
             <Pencil /> Edit category

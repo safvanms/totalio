@@ -73,7 +73,7 @@ export function DialogFooter({ className, ...props }: React.HTMLAttributes<HTMLD
   return (
     <div
       className={cn(
-        "safe-bottom flex shrink-0 flex-col-reverse gap-2 border-t bg-muted/30 px-5 py-3 sm:flex-row sm:justify-end sm:px-6",
+        "safe-bottom flex shrink-0 flex-col-reverse gap-2 border-t bg-muted/30 px-5 pt-4 sm:flex-row sm:justify-end sm:px-6",
         className,
       )}
       {...props}
