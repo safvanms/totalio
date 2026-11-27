@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PageHeader } from "@/components/shared/common";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataExportMenu, ImportDataButton } from "@/components/data/data-transfer";
+import { AccountSection } from "@/components/settings/account-section";
 import { useCategories, useDataAction, useSaveSettings, useSettingsQuery } from "@/hooks/use-data";
 import { FALLBACK_SETTINGS } from "@/hooks/use-settings";
 import { DATE_FORMATS, formatDateKey, PRESET_LABELS, todayKey } from "@/lib/dates";
@@ -71,7 +72,7 @@ export default function SettingsPage() {
     <>
       <PageHeader
         title="Settings"
-        description="Personalise Totalio and manage your data."
+        description="Manage your account, personalise Totalio and manage your data."
         actions={
           <>
             {dirty && (
@@ -93,6 +94,7 @@ export default function SettingsPage() {
         </div>
       ) : (
         <div className="grid min-w-0 gap-4 sm:gap-5 lg:grid-cols-2">
+          <AccountSection />
           <SectionCard title="Regional" description="How amounts and dates are displayed throughout the app.">
             <Field label="Currency" htmlFor="currency" hint={`Preview: ${formatMoney(123456.78, draft.currency)}`}>
               <Select value={draft.currency} onValueChange={(currency) => setDraft((d) => ({ ...d, currency }))}>

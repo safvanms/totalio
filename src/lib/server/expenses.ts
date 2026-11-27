@@ -41,8 +41,8 @@ const listQuerySchema = z.object({
 
 export type ExpenseListQuery = z.input<typeof listQuerySchema>;
 
-function whereFrom(q: z.output<typeof listQuerySchema>): Prisma.ExpenseWhereInput {
-  const where: Prisma.ExpenseWhereInput = {};
+function whereFrom(userId: string, q: z.output<typeof listQuerySchema>): Prisma.ExpenseWhereInput {
+  const where: Prisma.ExpenseWhereInput = { userId };
   // SQLite LIKE is already case-insensitive; Postgres needs mode: "insensitive".
   if (q.q) where.particular = IS_POSTGRES ? ({ contains: q.q, mode: "insensitive" } as Prisma.StringFilter) : { contains: q.q };
   if (q.categoryIds.length) where.categoryId = { in: q.categoryIds };
@@ -61,10 +61,10 @@ function whereFrom(q: z.output<typeof listQuerySchema>): Prisma.ExpenseWhereInpu
   return where;
 }
 
-export async function listExpenses(params: Record<string, string | undefined>): Promise<Paginated<Expense>> {
+export async function listExpenses(userId: string, params: Record<string, string | undefined>): Promise<Paginated<Expense>> {
   const q = listQuerySchema.parse(params);
   if (q.min !== undefined && q.max !== undefined && q.min > q.max) throw badRequest("Minimum amount is greater than maximum");
-  const where = whereFrom(q);
+  const where = whereFrom(userId, q);
   const orderBy: Prisma.ExpenseOrderByWithRelationInput[] =
     q.sort === "category"
       ? [{ category: { name: q.order } }, { expenseDate: "desc" }]
@@ -87,33 +87,36 @@ export async function listExpenses(params: Record<string, string | undefined>): 
 }
 
 /** All matching rows (no pagination) for exports. */
-export async function exportExpenses(params: Record<string, string | undefined>): Promise<Expense[]> {
+export async function exportExpenses(userId: string, params: Record<string, string | undefined>): Promise<Expense[]> {
   const q = listQuerySchema.parse({ ...params, page: 1, pageSize: 1 });
   const rows = await prisma.expense.findMany({
-    where: whereFrom(q),
+    where: whereFrom(userId, q),
     orderBy: q.sort === "category" ? [{ category: { name: q.order } }] : [{ [q.sort]: q.order }],
   });
   return rows.map(serializeExpense);
 }
 
 /** Lean rows for analytics in a date range. */
-export async function expensePoints(from?: string | null, to?: string | null): Promise<ExpensePoint[]> {
+export async function expensePoints(userId: string, from?: string | null, to?: string | null): Promise<ExpensePoint[]> {
   if (from && !isValidDateKey(from)) throw badRequest("Invalid from date");
   if (to && !isValidDateKey(to)) throw badRequest("Invalid to date");
   const rows = await prisma.expense.findMany({
-    where:
-      from || to
+    where: {
+      userId,
+      ...(from || to
         ? { expenseDate: { ...(from ? { gte: dateKeyToUTC(from) } : {}), ...(to ? { lte: dateKeyToUTC(to) } : {}) } }
-        : undefined,
+        : {}),
+    },
     select: { id: true, categoryId: true, particular: true, amount: true, expenseDate: true },
     orderBy: { expenseDate: "asc" },
   });
   return rows.map((r) => ({ ...r, expenseDate: utcToDateKey(r.expenseDate) }));
 }
 
-async function assertNormalCategories(ids: string[]) {
+/** The categories must exist, belong to this user, and be normal (not calculated). */
+async function assertNormalCategories(userId: string, ids: string[]) {
   const unique = [...new Set(ids)];
-  const cats = await prisma.category.findMany({ where: { id: { in: unique } }, select: { id: true, name: true, type: true } });
+  const cats = await prisma.category.findMany({ where: { id: { in: unique }, userId }, select: { id: true, name: true, type: true } });
   if (cats.length !== unique.length) throw badRequest("The selected category does not exist.");
   const calc = cats.find((c) => c.type === "CALCULATED");
   if (calc) {
@@ -121,23 +124,24 @@ async function assertNormalCategories(ids: string[]) {
   }
 }
 
-export async function getExpense(id: string): Promise<Expense> {
-  const e = await prisma.expense.findUnique({ where: { id } });
+export async function getExpense(userId: string, id: string): Promise<Expense> {
+  const e = await prisma.expense.findFirst({ where: { id, userId } });
   if (!e) throw notFound("Expense");
   return serializeExpense(e);
 }
 
 /** Accepts a single expense object or `{ expenses: [...] }` for quick multi-add. */
-export async function createExpenses(body: unknown): Promise<Expense[]> {
+export async function createExpenses(userId: string, body: unknown): Promise<Expense[]> {
   const list =
     body && typeof body === "object" && "expenses" in body
       ? expenseBatchSchema.parse(body).expenses
       : [expenseInputSchema.parse(body)];
-  await assertNormalCategories(list.map((e) => e.categoryId));
+  await assertNormalCategories(userId, list.map((e) => e.categoryId));
   const created = await prisma.$transaction(
     list.map((e) =>
       prisma.expense.create({
         data: {
+          userId,
           categoryId: e.categoryId,
           particular: e.particular,
           amount: roundMoney(e.amount),
@@ -151,9 +155,10 @@ export async function createExpenses(body: unknown): Promise<Expense[]> {
   return created.map(serializeExpense);
 }
 
-export async function updateExpense(id: string, body: unknown): Promise<Expense> {
+export async function updateExpense(userId: string, id: string, body: unknown): Promise<Expense> {
   const data = expenseInputSchema.partial().parse(body);
-  if (data.categoryId) await assertNormalCategories([data.categoryId]);
+  await getExpense(userId, id); // ownership check (404 otherwise)
+  if (data.categoryId) await assertNormalCategories(userId, [data.categoryId]);
   const updated = await prisma.expense.update({
     where: { id },
     data: {
@@ -168,8 +173,8 @@ export async function updateExpense(id: string, body: unknown): Promise<Expense>
   return serializeExpense(updated);
 }
 
-export async function deleteExpenses(ids: string[]): Promise<number> {
+export async function deleteExpenses(userId: string, ids: string[]): Promise<number> {
   if (!ids.length) throw badRequest("No expenses selected");
-  const res = await prisma.expense.deleteMany({ where: { id: { in: ids } } });
+  const res = await prisma.expense.deleteMany({ where: { id: { in: ids }, userId } });
   return res.count;
 }

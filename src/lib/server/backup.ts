@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { buildGraph, findCycleFrom, parseFormula, parseStoredFormula, referencedCategoryIds } from "@/lib/formula";
 import type { FormulaToken } from "@/lib/formula/tokens";
@@ -8,13 +9,18 @@ import { backupSchema, dashboardPrefsSchema, type Backup } from "@/lib/validatio
 import { badRequest } from "./http";
 import { getSettings, saveSettings } from "./settings";
 
+/*
+ * Export / import of one user's data. Everything here is scoped to `userId`:
+ * a restore only replaces that user's rows, never anyone else's.
+ */
+
 export const BACKUP_VERSION = 1;
 
-export async function createBackup(db: PrismaClient): Promise<Backup> {
+export async function createBackup(db: PrismaClient, userId: string): Promise<Backup> {
   const [categories, expenses, settings] = await Promise.all([
-    db.category.findMany({ orderBy: { createdAt: "asc" } }),
-    db.expense.findMany({ orderBy: [{ expenseDate: "asc" }, { createdAt: "asc" }] }),
-    getSettings(),
+    db.category.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
+    db.expense.findMany({ where: { userId }, orderBy: [{ expenseDate: "asc" }, { createdAt: "asc" }] }),
+    getSettings(userId),
   ]);
   return {
     app: "totalio",
@@ -48,6 +54,7 @@ export async function createBackup(db: PrismaClient): Promise<Backup> {
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const fixColor = (c: string) => (HEX.test(c) ? c : "#64748b");
 const fixIcon = (i: string, type: string) => (ICON_NAMES.includes(i) ? i : type === "CALCULATED" ? "calculator" : "tag");
+const newId = () => `c${Date.now().toString(36)}${randomBytes(8).toString("hex")}`;
 
 function parseBackup(input: unknown): Backup {
   const parsed = backupSchema.safeParse(input);
@@ -101,11 +108,26 @@ function validateSelfContained(b: Backup) {
   }
 }
 
-async function applySettings(partial: Backup["settings"]) {
+/** IDs (from a file) that already exist in the database, e.g. belonging to another account. */
+async function takenIds(tx: Prisma.TransactionClient, kind: "category" | "expense", ids: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  const CHUNK = 900;
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const slice = ids.slice(i, i + CHUNK);
+    const rows =
+      kind === "category"
+        ? await tx.category.findMany({ where: { id: { in: slice } }, select: { id: true } })
+        : await tx.expense.findMany({ where: { id: { in: slice } }, select: { id: true } });
+    rows.forEach((r) => out.add(r.id));
+  }
+  return out;
+}
+
+async function applySettings(userId: string, partial: Backup["settings"]) {
   if (!partial || (!partial.currency && !partial.dateFormat && !partial.dashboard)) return false;
-  const current = await getSettings();
+  const current = await getSettings(userId);
   const dash = dashboardPrefsSchema.safeParse(partial.dashboard ?? current.dashboard);
-  await saveSettings({
+  await saveSettings(userId, {
     currency: partial.currency || current.currency,
     dateFormat: partial.dateFormat || current.dateFormat,
     dashboard: dash.success ? dash.data : current.dashboard,
@@ -113,12 +135,13 @@ async function applySettings(partial: Backup["settings"]) {
   return true;
 }
 
-async function insertExpenses(tx: Prisma.TransactionClient, rows: Backup["expenses"]) {
+async function insertExpenses(tx: Prisma.TransactionClient, userId: string, rows: Backup["expenses"]) {
   const CHUNK = 500;
   for (let i = 0; i < rows.length; i += CHUNK) {
     await tx.expense.createMany({
       data: rows.slice(i, i + CHUNK).map((e) => ({
         id: e.id || undefined,
+        userId,
         categoryId: e.categoryId,
         particular: e.particular.trim(),
         amount: roundMoney(e.amount),
@@ -131,58 +154,75 @@ async function insertExpenses(tx: Prisma.TransactionClient, rows: Backup["expens
   }
 }
 
-/** Replace mode: validates thoroughly, then replaces all data atomically (exact restore). */
-export async function restoreBackup(db: PrismaClient, input: unknown) {
+async function deleteUserData(tx: Prisma.TransactionClient, userId: string) {
+  await tx.categoryDependency.deleteMany({ where: { category: { userId } } });
+  await tx.expense.deleteMany({ where: { userId } });
+  await tx.category.deleteMany({ where: { userId } });
+}
+
+/** Replace mode: validates thoroughly, then replaces this user's data atomically (exact restore). */
+export async function restoreBackup(db: PrismaClient, userId: string, input: unknown) {
   const b = parseBackup(input);
   validateSelfContained(b);
 
   await db.$transaction(
     async (tx) => {
-      await tx.categoryDependency.deleteMany();
-      await tx.expense.deleteMany();
-      await tx.category.deleteMany();
+      await deleteUserData(tx, userId);
+      // Keep the file's IDs unless another account already uses them.
+      const takenCats = await takenIds(tx, "category", b.categories.map((c) => c.id));
+      const idMap = new Map(b.categories.map((c) => [c.id, takenCats.has(c.id) || c.id.startsWith("imp_") ? newId() : c.id]));
+      const remap = (tokens: FormulaToken[]) =>
+        tokens.map((t) => (t.kind === "category" ? { ...t, categoryId: idMap.get(t.categoryId)! } : t));
+
       for (const c of b.categories) {
         await tx.category.create({
           data: {
-            id: c.id,
+            id: idMap.get(c.id)!,
+            userId,
             code: c.code.toUpperCase(),
             name: c.name.trim(),
             description: c.description ?? null,
             color: fixColor(c.color),
             icon: fixIcon(c.icon, c.type),
             type: c.type,
-            formula: c.type === "CALCULATED" && c.formula?.length ? JSON.stringify(c.formula) : null,
+            formula: c.type === "CALCULATED" && c.formula?.length ? JSON.stringify(remap(c.formula as FormulaToken[])) : null,
             createdAt: c.createdAt ? new Date(c.createdAt) : undefined,
           },
         });
       }
       for (const c of b.categories) {
-        const refs = c.type === "CALCULATED" ? referencedCategoryIds(c.formula as FormulaToken[]) : [];
-        if (refs.length) await tx.categoryDependency.createMany({ data: refs.map((r) => ({ categoryId: c.id, referencesId: r })) });
+        if (c.type !== "CALCULATED" || !c.formula?.length) continue;
+        const refs = referencedCategoryIds(remap(c.formula as FormulaToken[]));
+        await tx.categoryDependency.createMany({ data: refs.map((r) => ({ categoryId: idMap.get(c.id)!, referencesId: r })) });
       }
-      await insertExpenses(tx, b.expenses);
+      const takenExp = await takenIds(tx, "expense", b.expenses.flatMap((e) => (e.id ? [e.id] : [])));
+      await insertExpenses(
+        tx,
+        userId,
+        b.expenses.map((e) => ({ ...e, id: e.id && !takenExp.has(e.id) ? e.id : undefined, categoryId: idMap.get(e.categoryId)! })),
+      );
     },
     { timeout: 120_000 },
   );
-  const settings = await applySettings(b.settings);
+  const settings = await applySettings(userId, b.settings);
   return { mode: "replace" as const, categories: b.categories.length, expenses: b.expenses.length, settings };
 }
 
 /**
- * Merge mode: keeps existing data. Categories are matched by ID, then by
- * name (case-insensitive); unmatched ones are created (with a new code if
- * the file's code is taken). Expenses already present are skipped: by ID,
- * or for rows without a known ID by (category, date, amount, particular),
- * counted as a multiset so genuinely repeated entries are preserved.
- * Importing the same file twice therefore changes nothing.
+ * Merge mode: keeps this user's existing data. Categories are matched by ID,
+ * then by name (case-insensitive); unmatched ones are created (new code if the
+ * file's code is taken). Expenses already present are skipped: by ID, or for
+ * rows without a known ID by (category, date, amount, particular), counted as
+ * a multiset so genuinely repeated entries are preserved. Importing the same
+ * file twice therefore changes nothing.
  */
-export async function mergeBackup(db: PrismaClient, input: unknown) {
+export async function mergeBackup(db: PrismaClient, userId: string, input: unknown) {
   const b = parseBackup(input);
   validateSelfContained(b);
 
   return db.$transaction(
     async (tx) => {
-      const existing = await tx.category.findMany({ select: { id: true, name: true, code: true, type: true } });
+      const existing = await tx.category.findMany({ where: { userId }, select: { id: true, name: true, code: true, type: true } });
       const byId = new Map(existing.map((c) => [c.id, c]));
       const byName = new Map(existing.map((c) => [c.name.trim().toLowerCase(), c]));
       const usedCodes = new Set(existing.map((c) => c.code.toUpperCase()));
@@ -200,10 +240,8 @@ export async function mergeBackup(db: PrismaClient, input: unknown) {
       }
 
       // Pre-assign ids so formulas can reference categories created in the same merge.
-      for (const c of toCreate) {
-        const keepId = !c.id.startsWith("imp_") && !byId.has(c.id);
-        idMap.set(c.id, keepId ? c.id : `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`);
-      }
+      const taken = await takenIds(tx, "category", toCreate.map((c) => c.id));
+      for (const c of toCreate) idMap.set(c.id, c.id.startsWith("imp_") || taken.has(c.id) ? newId() : c.id);
       const remap = (tokens: FormulaToken[]) =>
         tokens.map((t) => (t.kind === "category" ? { ...t, categoryId: idMap.get(t.categoryId) ?? t.categoryId } : t));
 
@@ -216,6 +254,7 @@ export async function mergeBackup(db: PrismaClient, input: unknown) {
         await tx.category.create({
           data: {
             id: idMap.get(c.id)!,
+            userId,
             code,
             name: c.name.trim(),
             description: c.description ?? null,
@@ -233,16 +272,16 @@ export async function mergeBackup(db: PrismaClient, input: unknown) {
         await tx.categoryDependency.createMany({ data: refs.map((r) => ({ categoryId: idMap.get(c.id)!, referencesId: r })) });
       }
 
-      // Whole-graph checks after merging.
-      const all = await tx.category.findMany({ select: { id: true, type: true, formula: true } });
+      // Whole-graph checks after merging (this user's categories only).
+      const all = await tx.category.findMany({ where: { userId }, select: { id: true, type: true, formula: true } });
       const graph = buildGraph(all.map((c) => ({ id: c.id, type: c.type === "CALCULATED" ? "CALCULATED" : "NORMAL", formula: parseStoredFormula(c.formula) })));
       for (const c of toCreate) if (findCycleFrom(graph, idMap.get(c.id)!)) throw badRequest("Merging would create circular formulas.");
       const calcIds = new Set(all.filter((c) => c.type === "CALCULATED").map((c) => c.id));
 
-      // Expenses: skip what's already stored.
+      // Expenses: skip what this user already has.
       const sig = (catId: string, date: string, amount: number, particular: string) =>
         `${catId}|${date}|${Math.round(amount * 100)}|${particular.trim().toLowerCase()}`;
-      const stored = await tx.expense.findMany({ select: { id: true, categoryId: true, expenseDate: true, amount: true, particular: true } });
+      const stored = await tx.expense.findMany({ where: { userId }, select: { id: true, categoryId: true, expenseDate: true, amount: true, particular: true } });
       const storedIds = new Set(stored.map((e) => e.id));
       const counts = new Map<string, number>();
       for (const e of stored) {
@@ -269,7 +308,8 @@ export async function mergeBackup(db: PrismaClient, input: unknown) {
         }
         toInsert.push({ ...e, categoryId: catId });
       }
-      await insertExpenses(tx, toInsert);
+      const takenExp = await takenIds(tx, "expense", toInsert.flatMap((e) => (e.id ? [e.id] : [])));
+      await insertExpenses(tx, userId, toInsert.map((e) => ({ ...e, id: e.id && !takenExp.has(e.id) ? e.id : undefined })));
       return {
         mode: "merge" as const,
         categoriesCreated: toCreate.length,
@@ -282,6 +322,7 @@ export async function mergeBackup(db: PrismaClient, input: unknown) {
   );
 }
 
-export async function clearAll(db: PrismaClient) {
-  await db.$transaction([db.categoryDependency.deleteMany(), db.expense.deleteMany(), db.category.deleteMany()]);
+/** Deletes this user's categories and expenses (settings and account are kept). */
+export async function clearAll(db: PrismaClient, userId: string) {
+  await db.$transaction((tx) => deleteUserData(tx, userId));
 }

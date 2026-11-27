@@ -1,6 +1,6 @@
-// Totalio data model.
-// SQLite for local development; switch `provider` to "postgresql" and update
-// DATABASE_URL to migrate. No SQLite-specific features are used.
+// Totalio data model: LOCAL DEVELOPMENT (SQLite).
+// prisma/schema.postgres.prisma is generated from this file by
+// `npm run schema:sync`. Edit models here only.
 
 generator client {
   provider = "prisma-client-js"
@@ -11,10 +11,51 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ---------------------------------------------------------------- accounts
+
+model User {
+  id           String   @id @default(cuid())
+  /// Lower-cased, trimmed
+  email        String   @unique
+  name         String
+  /// scrypt$N$r$p$salt$hash
+  passwordHash String
+  /// Brute-force protection
+  failedLogins Int       @default(0)
+  lockedUntil  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions   Session[]
+  categories Category[]
+  expenses   Expense[]
+  setting    Setting?
+}
+
+/// Login session. Only a SHA-256 hash of the cookie token is stored.
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------- data
+// `userId` is nullable only so that upgrading a database that already holds
+// data from before accounts existed never fails. Those rows are assigned to
+// the first account created. The application always filters by userId.
+
 model Category {
   id          String   @id @default(cuid())
-  /// Short, stable reference code shown in formulas (C1, C2, ...)
-  code        String   @unique
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Short reference code shown in formulas (C1, C2, ...), unique per user
+  code        String
   name        String
   description String?
   color       String
@@ -32,8 +73,9 @@ model Category {
   /// Calculated categories that reference this category
   dependents CategoryDependency[] @relation("ReferencedCategory")
 
-  @@index([type])
-  @@index([name])
+  @@unique([userId, code])
+  @@index([userId, type])
+  @@index([userId, name])
 }
 
 /// Edge in the formula dependency graph. Kept in sync with Category.formula on save.
@@ -50,6 +92,8 @@ model CategoryDependency {
 
 model Expense {
   id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   particular  String
@@ -62,17 +106,19 @@ model Expense {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([userId, expenseDate])
   @@index([categoryId, expenseDate])
-  @@index([expenseDate])
-  @@index([particular])
+  @@index([userId, particular])
 }
 
-/// Single-row application settings
+/// Per-user application settings
 model Setting {
-  id                String   @id @default("singleton")
-  currency          String   @default("INR")
-  dateFormat        String   @default("dd MMM yyyy")
+  id         String   @id @default(cuid())
+  userId     String?  @unique
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currency   String   @default("INR")
+  dateFormat String   @default("dd MMM yyyy")
   /// JSON-encoded DashboardPreferences
-  dashboard         String   @default("{}")
-  updatedAt         DateTime @updatedAt
+  dashboard  String   @default("{}")
+  updatedAt  DateTime @updatedAt
 }

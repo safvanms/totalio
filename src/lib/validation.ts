@@ -74,6 +74,37 @@ export const settingsSchema = z.object({
   dashboard: dashboardPrefsSchema,
 });
 
+/* Accounts ---------------------------------------------------------------- */
+
+export const emailSchema = z
+  .string({ required_error: "Email is required" })
+  .trim()
+  .toLowerCase()
+  .min(1, "Email is required")
+  .max(254, "Email is too long")
+  .email("Enter a valid email address");
+
+export const newPasswordSchema = z
+  .string({ required_error: "Password is required" })
+  .min(8, "Use at least 8 characters")
+  .max(128, "Use at most 128 characters")
+  .refine((p) => /[A-Za-z]/.test(p) && /[0-9]/.test(p), "Use at least one letter and one number");
+
+export const nameSchema = z.string().trim().min(1, "Name is required").max(60, "Keep it under 60 characters");
+
+export const signupSchema = z.object({ name: nameSchema, email: emailSchema, password: newPasswordSchema });
+export const loginSchema = z.object({ email: emailSchema, password: z.string().min(1, "Password is required").max(128) });
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Enter your current password").max(128),
+  newPassword: newPasswordSchema,
+});
+export const deleteAccountSchema = z.object({ password: z.string().min(1, "Enter your password").max(128) });
+
+export type SignupInput = z.infer<typeof signupSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
+
+/* Backup ------------------------------------------------------------------ */
+
 export const backupSchema = z.object({
   // "spendly" = files exported before the app was renamed; still importable.
   app: z.enum(["totalio", "spendly"]),

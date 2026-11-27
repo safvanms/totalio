@@ -22,10 +22,30 @@ export function json<T>(data: T, init?: ResponseInit) {
 
 type Handler<C> = (req: Request, ctx: C) => Promise<Response>;
 
+/**
+ * CSRF defence for cookie-authenticated requests: a browser always sends
+ * Origin on cross-site POST/PUT/PATCH/DELETE, so reject any whose origin
+ * isn't this site. (SameSite=Lax cookies are the first line of defence.)
+ */
+function assertSameOrigin(req: Request) {
+  if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return;
+  const origin = req.headers.get("origin");
+  if (!origin) return; // non-browser clients
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  let originHost: string | null = null;
+  try {
+    originHost = new URL(origin).host;
+  } catch {
+    /* malformed */
+  }
+  if (!host || originHost !== host) throw new HttpError(403, "Cross-site request blocked.");
+}
+
 /** Wraps a route handler with uniform error -> JSON translation. */
 export function route<C = unknown>(fn: Handler<C>): Handler<C> {
   return async (req, ctx) => {
     try {
+      assertSameOrigin(req);
       return await fn(req, ctx);
     } catch (e) {
       if (e instanceof HttpError) {

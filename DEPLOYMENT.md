@@ -100,9 +100,13 @@ When it finishes, click **Visit**. You'll get a URL like `https://totalio-xxxx.v
 
 ---
 
-## Step 6 – Add your data
+## Step 6 – Create your account and add your data
 
-The production database starts empty. Choose one:
+Open the live URL. You'll land on **Sign in**. Click **Create an account**.
+
+> **Sign up straight away.** The *first* account created on a site takes ownership of any data that was stored before accounts existed (see *Upgrading a site that had no accounts* below). On a brand-new database there's nothing to claim, but it's still good to be first.
+
+Each account sees **only its own** categories, expenses, formulas and settings. Then choose one:
 
 - **Move your local data (recommended):** locally, go to **Settings → Export data → JSON** (or CSV/Excel). On the live site, go to **Settings → Import data**, choose the file, then **Replace everything**. Categories, formulas, expenses and settings come across exactly.
 - **Demo data:** on the live site, go to **Settings → Load sample data**.
@@ -120,12 +124,26 @@ On the live URL:
 
 ---
 
-## Step 8 – Protect it (important)
+## Step 8 – Accounts & sign-ups
 
-**Totalio has no login.** Anyone who has the URL can view, change, export or delete all your data.
+Totalio requires sign-in. Every person creates their own account, and data is completely separate per account; the server checks ownership on every request.
 
-- Go to **Project → Settings → Deployment Protection** and turn on the strongest option your plan allows (e.g. *Vercel Authentication*, so only you, logged in to Vercel, can open it). Options differ between the Hobby and Pro plans, so check what applies to your production URL.
-- Don't share the URL publicly until proper sign-in is added to the app.
+**Who can sign up?** By default, anyone with the URL can create an account (and sees only their own, empty data). To make the site **invite-free / private** after you and your family or team have signed up:
+
+1. Go to **Project → Settings → Environment Variables** and add `ALLOW_SIGNUPS` = `false` (Production and Preview).
+2. Redeploy.
+
+The sign-up page then says sign-ups are closed. Existing accounts keep working. (The very first account can always be created, so a fresh deployment never locks you out.) Set it back to `true` to reopen.
+
+**Account management** (each user, under **Settings → Account**): change name, change password (signs out other devices), sign out of other devices, delete account (removes all of that user's data).
+
+**Forgotten passwords:** there's no email-based reset yet, because that needs an email-sending service. Until then, an affected user can create a new account. Their old data stays tied to the old account, so encourage everyone to keep an export as a backup.
+
+**Security details:**
+- Passwords are hashed with scrypt.
+- Sessions use HttpOnly, Secure, SameSite cookies and last 30 days, renewed while in use.
+- Five wrong passwords lock an account for 15 minutes.
+- Cross-site requests are rejected.
 
 ---
 
@@ -162,6 +180,17 @@ If you deployed before the app was renamed to Totalio, none of this is required;
 - **Vercel project:** go to **Project → Settings → General → Project Name** and set it to `totalio`. The `*.vercel.app` URL changes; a custom domain doesn't.
 - **Your data is unaffected:** the database is the same. Export files made under the old name still import.
 
+## Upgrading a site that had no accounts
+
+If you deployed an earlier version (before sign-in existed), your production database already contains data that belongs to nobody. Deploying this version is safe: the database change only **adds** tables and columns, and nothing is deleted.
+
+1. **Optional but recommended:** before deploying, open the live site and go to **Settings → Export data → JSON** to keep a copy.
+2. Push the new code. Vercel builds and upgrades the database automatically.
+3. **Immediately** open the site and **create your account**. As the first account, it automatically takes ownership of all existing categories, expenses and settings.
+4. Other people can then sign up and will start with empty accounts.
+
+If someone else managed to sign up first, they now own that data. In that case, delete that account (sign in as it, then **Settings → Delete account**), create yours, and import the JSON export from step 1.
+
 ## Updating the app later
 
 ```bash
@@ -172,7 +201,7 @@ git push
 
 Vercel builds and deploys automatically.
 
-**If you change the data model:** make the same change in **both** `prisma/schema.prisma` and `prisma/schema.postgres.prisma`; only their `datasource` blocks differ. The next deploy applies it. If a change would delete data (e.g. dropping a column), `prisma db push` stops the build instead of losing data. Export a backup first, then handle that change deliberately.
+**If you change the data model:** edit `prisma/schema.prisma`, then run `npm run schema:sync` to regenerate the production schema, and commit both files. The next deploy applies it. If a change would delete data (e.g. dropping a column), `prisma db push` stops the build instead of losing data. Export a backup first, then handle that change deliberately.
 
 ---
 
@@ -186,6 +215,9 @@ Vercel builds and deploys automatically.
 | Pages load but show "Couldn't load this data" | Check **Deployments → (latest) → Functions/Logs**. Usually `DATABASE_URL` is missing for that environment (Production vs Preview). |
 | Build fails: `data loss` warning from `prisma db push` | A schema change would delete data. See *Updating the app later*. |
 | Import of a very large file fails | Vercel limits request bodies to about 4.5 MB. Split the file (e.g. by year) and import each part with **Merge**. |
+| Every page sends me back to Sign in | Cookies are blocked for the site, or you're opening it over plain `http://` in production (the session cookie requires HTTPS). Use the `https://` URL. |
+| "Too many failed attempts" | Five wrong passwords lock that account for 15 minutes. Wait, then try again. |
+| Sign-up says "Sign-ups are closed" | `ALLOW_SIGNUPS` is `false`. Remove it or set it to `true`, then redeploy. |
 | Search is case-sensitive in production | `DATABASE_URL` must start with `postgres://` or `postgresql://`; the app uses that to switch on case-insensitive search. |
 
 ---
@@ -198,6 +230,9 @@ You normally don't need this. In PowerShell:
 $env:DATABASE_URL = "<pooled string>"
 $env:DIRECT_URL   = "<direct string>"
 npm run db:push:prod     # create/update tables
-npm run db:seed:prod     # REPLACES all data with the sample dataset
 Remove-Item Env:DATABASE_URL, Env:DIRECT_URL
 ```
+
+To load demo data into a production account, sign in and use **Settings → Load sample data**. It only affects that account.
+
+**If you change the data model:** edit `prisma/schema.prisma` only, then run `npm run schema:sync` to regenerate `prisma/schema.postgres.prisma`. The Vercel build refuses to run if the two are out of sync.

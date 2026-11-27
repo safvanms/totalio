@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Hint, Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/overlays";
 import { ThemeToggle } from "./theme-toggle";
+import { UserMenu } from "./user-menu";
 import { useUiStore } from "@/stores/ui-store";
 import { useDialogs } from "@/stores/dialog-store";
 import { GlobalDialogs } from "./global-dialogs";
@@ -196,6 +197,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="hidden xs:inline">Add expense</span>
               </Button>
               <ThemeToggle />
+              <UserMenu />
             </div>
           </div>
         </header>

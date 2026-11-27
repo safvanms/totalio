@@ -45,6 +45,8 @@ const run = (cmd) => {
   execSync(cmd, { stdio: "inherit", env });
 };
 
+run("node scripts/sync-schema.mjs --check");
+
 if (process.argv.includes("--check")) {
   run(`npx prisma validate --schema ${SCHEMA}`);
   process.exit(0);

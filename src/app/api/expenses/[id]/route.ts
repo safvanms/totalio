@@ -1,18 +1,19 @@
-import { json, readJson, route } from "@/lib/server/http";
+import { json, readJson } from "@/lib/server/http";
+import { authedRoute } from "@/lib/server/auth";
 import { deleteExpenses, getExpense, updateExpense } from "@/lib/server/expenses";
 
 type Ctx = { params: Promise<{ id: string }> };
 export const dynamic = "force-dynamic";
 
-export const GET = route<Ctx>(async (_req, { params }) => json(await getExpense((await params).id)));
+export const GET = authedRoute<Ctx>(async (_req, { params }, user) => json(await getExpense(user.id, (await params).id)));
 
-export const PATCH = route<Ctx>(async (req, { params }) =>
-  json(await updateExpense((await params).id, await readJson(req))),
+export const PATCH = authedRoute<Ctx>(async (req, { params }, user) =>
+  json(await updateExpense(user.id, (await params).id, await readJson(req))),
 );
 
-export const DELETE = route<Ctx>(async (_req, { params }) => {
+export const DELETE = authedRoute<Ctx>(async (_req, { params }, user) => {
   const id = (await params).id;
-  await getExpense(id);
-  await deleteExpenses([id]);
+  await getExpense(user.id, id);
+  await deleteExpenses(user.id, [id]);
   return json({ ok: true });
 });

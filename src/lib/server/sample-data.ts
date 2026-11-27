@@ -36,14 +36,14 @@ const PARTICULARS: Record<string, { items: string[]; min: number; max: number; p
   C7: { items: ["Electricity bill", "Internet bill", "Water bill", "Mobile recharge"], min: 199, max: 3200, perMonth: [3, 4] },
 };
 
-export async function loadSampleData(db: PrismaClient) {
-  await clearAll(db);
+export async function loadSampleData(db: PrismaClient, userId: string) {
+  await clearAll(db, userId);
   const rand = rng(42);
   const ids: Record<string, string> = {};
   const created = new Date();
   for (const [i, c] of NORMAL.entries()) {
     const row = await db.category.create({
-      data: { ...c, type: "NORMAL", createdAt: subMonths(created, 15 - i * 0.1) },
+      data: { ...c, userId, type: "NORMAL", createdAt: subMonths(created, 15 - i * 0.1) },
     });
     ids[c.code] = row.id;
   }
@@ -54,6 +54,7 @@ export async function loadSampleData(db: PrismaClient) {
   const tickets = [t(ids.C1), plus(), t(ids.C2), plus(), t(ids.C3)];
   const allTickets = await db.category.create({
     data: {
+      userId,
       code: "C8",
       name: "All Tickets Expenses",
       icon: "ticket",
@@ -66,6 +67,7 @@ export async function loadSampleData(db: PrismaClient) {
   const travel = [t(allTickets.id), plus(), t(ids.C4)];
   const totalTravel = await db.category.create({
     data: {
+      userId,
       code: "C9",
       name: "Total Travel Cost",
       icon: "globe",
@@ -89,7 +91,7 @@ export async function loadSampleData(db: PrismaClient) {
   const today = new Date();
   const start = subMonths(today, 13);
   start.setDate(1);
-  const rows: { categoryId: string; particular: string; amount: number; expenseDate: Date; description: string | null }[] = [];
+  const rows: { userId: string; categoryId: string; particular: string; amount: number; expenseDate: Date; description: string | null }[] = [];
   for (let m = 0; m < 14; m++) {
     const monthStart = new Date(start.getFullYear(), start.getMonth() + m, 1);
     const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
@@ -100,6 +102,7 @@ export async function loadSampleData(db: PrismaClient) {
         if (day > today) continue;
         const amount = Math.round((spec.min + rand() * (spec.max - spec.min)) / 10) * 10;
         rows.push({
+          userId,
           categoryId: ids[code],
           particular: spec.items[Math.floor(rand() * spec.items.length)],
           amount,
@@ -112,9 +115,9 @@ export async function loadSampleData(db: PrismaClient) {
   // The exact example from the brief, in the current month.
   const d = toDateKey(today);
   rows.push(
-    { categoryId: ids.C1, particular: "Train ticket to Kochi", amount: 450, expenseDate: dateKeyToUTC(d), description: "Sample entry" },
-    { categoryId: ids.C1, particular: "Return ticket", amount: 450, expenseDate: dateKeyToUTC(d), description: "Sample entry" },
-    { categoryId: ids.C1, particular: "Express ticket", amount: 650, expenseDate: dateKeyToUTC(d), description: "Sample entry" },
+    { userId, categoryId: ids.C1, particular: "Train ticket to Kochi", amount: 450, expenseDate: dateKeyToUTC(d), description: "Sample entry" },
+    { userId, categoryId: ids.C1, particular: "Return ticket", amount: 450, expenseDate: dateKeyToUTC(d), description: "Sample entry" },
+    { userId, categoryId: ids.C1, particular: "Express ticket", amount: 650, expenseDate: dateKeyToUTC(d), description: "Sample entry" },
   );
   await db.expense.createMany({ data: rows });
   return { categories: NORMAL.length + 2, expenses: rows.length };

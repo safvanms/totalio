@@ -8,8 +8,8 @@ export const DEFAULT_SETTINGS: Settings = {
   dashboard: dashboardPrefsSchema.parse({}),
 };
 
-export async function getSettings(): Promise<Settings> {
-  const row = await prisma.setting.findUnique({ where: { id: "singleton" } });
+export async function getSettings(userId: string): Promise<Settings> {
+  const row = await prisma.setting.findUnique({ where: { userId } });
   if (!row) return DEFAULT_SETTINGS;
   let dashboard = DEFAULT_SETTINGS.dashboard;
   try {
@@ -20,12 +20,9 @@ export async function getSettings(): Promise<Settings> {
   return { currency: row.currency, dateFormat: row.dateFormat, dashboard };
 }
 
-export async function saveSettings(input: unknown): Promise<Settings> {
+export async function saveSettings(userId: string, input: unknown): Promise<Settings> {
   const s = settingsSchema.parse(input);
-  await prisma.setting.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", currency: s.currency, dateFormat: s.dateFormat, dashboard: JSON.stringify(s.dashboard) },
-    update: { currency: s.currency, dateFormat: s.dateFormat, dashboard: JSON.stringify(s.dashboard) },
-  });
-  return getSettings();
+  const data = { currency: s.currency, dateFormat: s.dateFormat, dashboard: JSON.stringify(s.dashboard) };
+  await prisma.setting.upsert({ where: { userId }, create: { userId, ...data }, update: data });
+  return getSettings(userId);
 }

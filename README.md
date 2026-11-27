@@ -8,18 +8,28 @@ Personal expense management & analytics dashboard with a visual, drag-and-drop f
 
 ```bash
 npm install          # also runs `prisma generate`
-npm run setup        # creates the SQLite DB and loads sample data
+npm run setup        # creates the SQLite DB and a demo account with sample data
 npm run dev          # http://localhost:3000
 ```
 
-Other scripts: `npm run build`, `npm start`, `npm test` (formula engine unit tests), `npm run typecheck`, `npm run db:reset` (wipe + reseed).
+Sign in with **demo@totalio.local / demo12345** (local demo account), or create your own account at `/signup`.
+
+Other scripts: `npm run build`, `npm start`, `npm test` (unit tests), `npm run typecheck`, `npm run db:reset` (wipe + reseed), `npm run schema:sync` (regenerate the production Prisma schema after editing `prisma/schema.prisma`).
+
+## Accounts & data isolation
+
+- Email + password accounts. Passwords are hashed with scrypt; sessions are HttpOnly cookies backed by a `Session` table, storing only a SHA-256 hash of each token. Five failed logins lock the account for 15 minutes.
+- Every category, expense and setting has a `userId`. Every API route goes through `authedRoute()` and every query is filtered by the signed-in user. Another user's IDs behave exactly like nonexistent ones (404), formulas can only reference your own categories, and imports remap IDs so two accounts can import the same file.
+- App pages live in the `src/app/(app)` route group, whose server layout redirects to `/login` without a valid session. Sign-in pages are in `src/app/(auth)`.
+- Data stored before accounts existed has `userId = null` and is claimed by the first account created.
+- Set `ALLOW_SIGNUPS=false` to close registration (the first account can always be created).
 
 Sample data is optional. Settings → *Delete all data* gives you an empty app; *Load sample data* restores the demo set.
 
 ## Architecture
 
 ```
-prisma/schema.prisma        Category, Expense, CategoryDependency (formula graph edges), Setting
+prisma/schema.prisma        User, Session, Category, Expense, CategoryDependency (formula graph edges), Setting
 src/lib/formula/            Safe formula engine: tokens, recursive-descent parser, evaluator, dependency graph
 src/lib/analytics.ts        Pure functions: totals, summaries, time series, calculated history, breakdowns
 src/lib/server/             Prisma services (categories, expenses, settings, backup, sample data)
