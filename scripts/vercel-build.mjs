@@ -9,7 +9,8 @@
  * Then: prisma generate -> prisma db push (create/update tables) -> next build.
  * `node scripts/vercel-build.mjs --check` only validates the setup.
  */
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
+import { classifyPushOutput } from "./push-guard.mjs";
 
 const SCHEMA = "prisma/schema.postgres.prisma";
 const env = { ...process.env };
@@ -53,5 +54,35 @@ if (process.argv.includes("--check")) {
 }
 
 run(`npx prisma generate --schema ${SCHEMA}`);
-run(`npx prisma db push --schema ${SCHEMA} --skip-generate`);
+pushSchema();
 run("npx next build");
+
+/**
+ * `prisma db push`, refusing anything that could destroy data.
+ *
+ * Prisma reports every added unique constraint as "possible data loss",
+ * because it fails if duplicates already exist. Adding one never deletes
+ * data (it either applies or errors), so when *all* warnings are of that
+ * kind we retry with --accept-data-loss. Any other warning (dropped column,
+ * changed type, …) stops the build with Prisma's message.
+ */
+function pushSchema() {
+  const cmd = `npx prisma db push --schema ${SCHEMA} --skip-generate`;
+  console.log(`\n$ ${cmd}`);
+  const first = spawnSync(cmd, { shell: true, env, encoding: "utf8" });
+  const out = `${first.stdout ?? ""}${first.stderr ?? ""}`;
+  process.stdout.write(out);
+  if (first.status === 0) return;
+
+  const { warnings, unsafe, canAutoAccept } = classifyPushOutput(out);
+  if (!canAutoAccept) {
+    console.error(
+      "\n✖ Database update stopped. Nothing was changed." +
+        (unsafe.length ? `\n  These changes could remove or alter existing data:\n${unsafe.map((w) => `    - ${w}`).join("\n")}` : "") +
+        '\n  See DEPLOYMENT.md → "Updating the app later".\n',
+    );
+    process.exit(1);
+  }
+  console.log(`\n• All ${warnings.length} warning(s) are new unique constraints, which can't delete data. Applying them.`);
+  run(`${cmd} --accept-data-loss`);
+}

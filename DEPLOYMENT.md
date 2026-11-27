@@ -213,7 +213,8 @@ Vercel builds and deploys automatically.
 | Build fails: `No database connection string found` | The database isn't connected to this environment. Go to Storage → your database → **Connect Project**, tick Production and Preview, then redeploy. |
 | Build fails: `Can't reach database server` | Wrong or expired connection string, or a missing `?sslmode=require`. Copy it again from Neon/Storage. |
 | Pages load but show "Couldn't load this data" | Check **Deployments → (latest) → Functions/Logs**. Usually `DATABASE_URL` is missing for that environment (Production vs Preview). |
-| Build fails: `data loss` warning from `prisma db push` | A schema change would delete data. See *Updating the app later*. |
+| Build log shows `There might be data loss…` but continues | Normal when new unique constraints are added. They can't delete data, so the build applies them automatically (`• All N warning(s) are new unique constraints…`). |
+| Build fails: `Database update stopped … could remove or alter existing data` | A schema change would really delete or change data. Nothing was applied. Export a backup, then handle that change deliberately (see *Updating the app later*). |
 | Import of a very large file fails | Vercel limits request bodies to about 4.5 MB. Split the file (e.g. by year) and import each part with **Merge**. |
 | Every page sends me back to Sign in | Cookies are blocked for the site, or you're opening it over plain `http://` in production (the session cookie requires HTTPS). Use the `https://` URL. |
 | "Too many failed attempts" | Five wrong passwords lock that account for 15 minutes. Wait, then try again. |
