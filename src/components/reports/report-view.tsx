@@ -404,7 +404,7 @@ export function ReportView() {
 
         {/* Overview -------------------------------------------------- */}
         <TabsContent value="overview" className="space-y-4 sm:space-y-5 lg:space-y-6">
-          <div className="grid grid-cols-1 gap-4 xs:grid-cols-2 sm:gap-5 lg:grid-cols-3 2xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 2xl:grid-cols-6">
             <StatCard label="Total Expenses" icon={Wallet} value={money(summary.totalExpenses)} sub={`${summary.entryCount.toLocaleString()} entries`} />
             <StatCard label="Average Daily" icon={CalendarDays} tone="sky" value={money(summary.averageDaily)} sub={`over ${summary.days} day${summary.days === 1 ? "" : "s"}`} />
             <StatCard label="Expense Entries" icon={Hash} tone="violet" value={summary.entryCount.toLocaleString()} sub={`avg ${money(summary.averageExpense)} each`} />
@@ -670,7 +670,7 @@ export function ReportView() {
             </div>
           </Card>
 
-          <div className="grid grid-cols-1 gap-4 xs:grid-cols-2 sm:gap-5 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
             <StatCard label="Range A total" icon={Wallet} value={money(summary.totalExpenses)} sub={labelA} />
             <StatCard label="Range B total" icon={Wallet} tone="success" value={ptsB.isLoading ? "…" : money(totalB)} sub={labelB} />
             <StatCard label="Difference" icon={BarChart3} tone="violet" value={money(summary.totalExpenses - totalB)} sub="A minus B" />

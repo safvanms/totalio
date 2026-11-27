@@ -108,6 +108,8 @@ export function DashboardView() {
     <PageHeader
       title="Dashboard"
       description={`Your spending at a glance · ${rangeLabel}`}
+      // Phones: "Add expense" is already in the top bar, and Quick add sits next to the date filter.
+      actionsClassName="hidden sm:flex"
       actions={
         <>
           <Button variant="outline" onClick={() => openQuickAdd()}>
@@ -119,7 +121,16 @@ export function DashboardView() {
         </>
       }
     >
-      <DateRangeFilter state={state} range={range} onChange={setState} />
+      <DateRangeFilter
+        state={state}
+        range={range}
+        onChange={setState}
+        phoneLeading={
+          <Button variant="outline" onClick={() => openQuickAdd()}>
+            <Zap /> Quick add
+          </Button>
+        }
+      />
     </PageHeader>
   );
 
@@ -169,7 +180,7 @@ export function DashboardView() {
     <>
       {header}
 
-      <section aria-label="Summary" className="grid grid-cols-1 gap-4 xs:grid-cols-2 sm:gap-5 lg:grid-cols-3 2xl:grid-cols-6">
+      <section aria-label="Summary" className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 2xl:grid-cols-6">
         <StatCard
           label="Total Expenses"
           icon={Wallet}

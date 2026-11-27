@@ -170,7 +170,7 @@ function NormalDetail({ category, all, points, range }: { category: Category; al
 
   return (
     <>
-      <div className="grid gap-4 xs:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Total in period" value={money(total)} sub={describeRange(range, dateFormat)} icon={Wallet} />
         <StatCard label="Entries" value={mine.length.toLocaleString()} sub={`${category.expenseCount.toLocaleString()} all time`} icon={Hash} tone="violet" />
         <StatCard label="Average entry" value={money(mine.length ? total / mine.length : 0)} sub={largest ? `Largest: ${money(largest.amount)}` : "No entries"} icon={TrendingUp} tone="sky" />

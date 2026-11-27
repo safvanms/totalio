@@ -40,13 +40,31 @@ function FormError({ message }: { message?: string | null }) {
 /** Full navigation (not router.push) so every cached query starts fresh for this account. */
 const enterApp = () => window.location.assign("/dashboard");
 
+/**
+ * Busy state for auth forms: true while the API call runs AND after it
+ * succeeds until the browser has left the page, so the button never looks
+ * idle (and can't be clicked again) while the dashboard is loading.
+ */
+function useAuthSubmit() {
+  const [redirecting, setRedirecting] = useState(false);
+  return {
+    redirecting,
+    succeed: () => {
+      setRedirecting(true);
+      enterApp();
+    },
+  };
+}
+
 export function LoginForm({ notice }: { notice?: string | null }) {
   const form = useForm<LoginInput>({ resolver: zodResolver(loginSchema), defaultValues: { email: "", password: "" } });
   const err = form.formState.errors;
+  const { redirecting, succeed } = useAuthSubmit();
+  const busy = form.formState.isSubmitting || redirecting;
   const onSubmit = form.handleSubmit(async (v) => {
     try {
       await api("/api/auth/login", { method: "POST", json: v });
-      enterApp();
+      succeed();
     } catch (e) {
       form.setError("root", { message: errorMessage(e) });
     }
@@ -60,17 +78,19 @@ export function LoginForm({ notice }: { notice?: string | null }) {
           <Info className="mt-0.5 h-4 w-4 shrink-0" /> {notice}
         </p>
       )}
-      <form onSubmit={onSubmit} noValidate className="mt-6 space-y-4">
-        <Field label="Email" htmlFor="email" error={err.email?.message}>
-          <Input id="email" type="email" autoComplete="email" autoFocus inputMode="email" aria-invalid={!!err.email} {...form.register("email")} />
-        </Field>
-        <Field label="Password" htmlFor="password" error={err.password?.message}>
-          <PasswordInput id="password" autoComplete="current-password" invalid={!!err.password} {...form.register("password")} />
-        </Field>
-        <FormError message={err.root?.message} />
-        <Button type="submit" size="lg" className="w-full" loading={form.formState.isSubmitting}>
-          Sign in
-        </Button>
+      <form onSubmit={onSubmit} noValidate className="mt-6" aria-busy={busy}>
+        <fieldset disabled={busy} className="space-y-4">
+          <Field label="Email" htmlFor="email" error={err.email?.message}>
+            <Input id="email" type="email" autoComplete="email" autoFocus inputMode="email" aria-invalid={!!err.email} {...form.register("email")} />
+          </Field>
+          <Field label="Password" htmlFor="password" error={err.password?.message}>
+            <PasswordInput id="password" autoComplete="current-password" invalid={!!err.password} {...form.register("password")} />
+          </Field>
+          <FormError message={err.root?.message} />
+          <Button type="submit" size="lg" className="w-full" loading={busy}>
+            {redirecting ? "Opening your dashboard…" : busy ? "Signing in…" : "Sign in"}
+          </Button>
+        </fieldset>
       </form>
       <p className="mt-6 text-center text-sm text-muted-foreground">
         New to Totalio?{" "}
@@ -97,10 +117,12 @@ export function SignupForm({ allowed }: { allowed: boolean }) {
   const err = form.formState.errors;
   const pw = form.watch("password");
   const st = strength(pw);
+  const { redirecting, succeed } = useAuthSubmit();
+  const busy = form.formState.isSubmitting || redirecting;
   const onSubmit = form.handleSubmit(async (v) => {
     try {
       await api("/api/auth/signup", { method: "POST", json: v });
-      enterApp();
+      succeed();
     } catch (e) {
       const msg = errorMessage(e);
       if (/email/i.test(msg)) form.setError("email", { message: msg });
@@ -124,7 +146,8 @@ export function SignupForm({ allowed }: { allowed: boolean }) {
     <div className="animate-fade-in">
       <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
       <p className="mt-1.5 text-sm text-muted-foreground">Your expenses stay private to your account.</p>
-      <form onSubmit={onSubmit} noValidate className="mt-6 space-y-4">
+      <form onSubmit={onSubmit} noValidate className="mt-6" aria-busy={busy}>
+        <fieldset disabled={busy} className="space-y-4">
         <Field label="Name" htmlFor="name" error={err.name?.message}>
           <Input id="name" autoComplete="name" autoFocus maxLength={60} aria-invalid={!!err.name} {...form.register("name")} />
         </Field>
@@ -156,9 +179,10 @@ export function SignupForm({ allowed }: { allowed: boolean }) {
           )}
         </Field>
         <FormError message={err.root?.message} />
-        <Button type="submit" size="lg" className="w-full" loading={form.formState.isSubmitting}>
-          Create account
+        <Button type="submit" size="lg" className="w-full" loading={busy}>
+          {redirecting ? "Opening your dashboard…" : busy ? "Creating account…" : "Create account"}
         </Button>
+        </fieldset>
       </form>
       <p className="mt-6 text-center text-sm text-muted-foreground">
         Already have an account?{" "}

@@ -76,12 +76,15 @@ export function PageHeader({
   title,
   description,
   actions,
+  actionsClassName,
   className,
   children,
 }: {
   title: React.ReactNode;
   description?: React.ReactNode;
   actions?: React.ReactNode;
+  /** e.g. "hidden sm:flex" when the actions are shown elsewhere on phones */
+  actionsClassName?: string;
   className?: string;
   children?: React.ReactNode;
 }) {
@@ -92,7 +95,7 @@ export function PageHeader({
           <h1 className="text-balance text-2xl font-semibold tracking-tight sm:text-[28px]">{title}</h1>
           {description && <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">{description}</p>}
         </div>
-        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+        {actions && <div className={cn("flex flex-wrap items-center gap-2", actionsClassName)}>{actions}</div>}
       </div>
       {children}
     </div>
@@ -191,24 +194,32 @@ export function StatCard({
     rose: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
   };
   return (
-    <Card className={cn("group relative overflow-hidden p-4 transition-shadow hover:shadow-card-hover sm:p-5", className)}>
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-[13px] font-medium text-muted-foreground">{label}</p>
-        <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", tones[tone])}>
-          <Icon className="h-[18px] w-[18px]" />
+    // Compact below `sm` so two cards fit side by side even on 320px phones.
+    <Card className={cn("group relative min-w-0 overflow-hidden p-3 transition-shadow hover:shadow-card-hover xs:p-4 sm:p-5", className)}>
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
+        <p className="min-w-0 text-xs font-medium leading-snug text-muted-foreground sm:text-[13px]">{label}</p>
+        <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-lg xs:h-8 xs:w-8 sm:h-9 sm:w-9 sm:rounded-xl", tones[tone])}>
+          <Icon className="h-3.5 w-3.5 xs:h-4 xs:w-4 sm:h-[18px] sm:w-[18px]" />
         </span>
       </div>
       {loading ? (
         <>
-          <Skeleton className="mt-2 h-7 w-2/3" />
+          <Skeleton className="mt-2 h-6 w-2/3 sm:h-7" />
           <Skeleton className="mt-2.5 h-3 w-1/2" />
         </>
       ) : (
         <>
-          <div className="-mt-1 truncate text-[22px] font-semibold tracking-tight sm:text-2xl" title={typeof value === "string" ? value : undefined}>
+          <div
+            className="mt-1 truncate text-lg font-semibold tracking-tight xs:text-xl sm:-mt-1 sm:text-2xl"
+            title={typeof value === "string" ? value : undefined}
+          >
             {value}
           </div>
-          {sub && <div className="mt-1 truncate text-xs text-muted-foreground">{sub}</div>}
+          {sub && (
+            <div className="mt-0.5 truncate text-[11px] text-muted-foreground sm:mt-1 sm:text-xs" title={typeof sub === "string" ? sub : undefined}>
+              {sub}
+            </div>
+          )}
         </>
       )}
     </Card>

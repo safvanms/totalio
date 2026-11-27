@@ -24,11 +24,14 @@ export function DateRangeFilter({
   range,
   onChange,
   className,
+  phoneLeading,
 }: {
   state: RangeState;
   range: DateRange;
   onChange: (s: RangeState) => void;
   className?: string;
+  /** Phones only: content placed at the start of the row, with the select pushed to the end. */
+  phoneLeading?: React.ReactNode;
 }) {
   const { dateFormat } = useFormat();
   const [open, setOpen] = useState(false);
@@ -57,12 +60,14 @@ export function DateRangeFilter({
       <PopoverAnchor asChild>
       <div className={cn("flex min-w-0 flex-wrap items-center gap-2", className)}>
       {/* Phones: compact select */}
-      <div className="flex w-full gap-2 sm:hidden">
+      <div className={cn("flex w-full items-center gap-2 sm:hidden", phoneLeading && "justify-between")}>
+        {phoneLeading && <div className="shrink-0">{phoneLeading}</div>}
+        <div className={cn("flex min-w-0 items-center gap-2", phoneLeading ? "justify-end" : "flex-1")}>
         <Select
           value={state.preset}
           onValueChange={(v) => (v === "custom" ? openCustom(true) : onChange({ preset: v as RangePreset, from: null, to: null }))}
         >
-          <SelectTrigger aria-label="Date range">
+          <SelectTrigger aria-label="Date range" className={cn(phoneLeading && "w-[10.5rem] xs:w-44")}>
             <CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" />
             <SelectValue>{state.preset === "custom" ? customLabel : PRESET_LABELS[state.preset]}</SelectValue>
           </SelectTrigger>
@@ -79,6 +84,7 @@ export function DateRangeFilter({
             <CalendarRange />
           </Button>
         )}
+        </div>
       </div>
 
       {/* sm+: segmented presets */}
