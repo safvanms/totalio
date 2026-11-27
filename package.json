@@ -15,7 +15,7 @@
     "db:reset": "prisma db push --force-reset && tsx prisma/seed.ts",
     "setup": "prisma db push && tsx prisma/seed.ts",
     "postinstall": "prisma generate",
-    "vercel-build": "prisma generate --schema prisma/schema.postgres.prisma && prisma db push --schema prisma/schema.postgres.prisma --skip-generate && next build",
+    "vercel-build": "node scripts/vercel-build.mjs",
     "db:push:prod": "prisma db push --schema prisma/schema.postgres.prisma",
     "db:seed:prod": "prisma generate --schema prisma/schema.postgres.prisma && tsx prisma/seed.ts && prisma generate"
   },

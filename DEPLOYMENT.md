@@ -69,15 +69,18 @@ Vercel now adds the connection strings as environment variables. With the Neon i
 
 ## Step 4 – Set the environment variables
 
-Go to **Project → Settings → Environment Variables**. Spendly needs exactly these two:
+**With the Neon integration from Step 3, there is nothing to do here.** The build script (`scripts/vercel-build.mjs`) and the app pick up the variables the integration created:
 
-| Name | Value | Environments |
-|---|---|---|
-| `DATABASE_URL` | the **pooled** string (host contains `-pooler`) | Production, Preview |
-| `DIRECT_URL` | the **direct** string (no `-pooler`), i.e. the value of `DATABASE_URL_UNPOOLED` | Production, Preview |
+| Spendly uses | Taken from (first one that exists) |
+|---|---|
+| `DATABASE_URL` (pooled) | `DATABASE_URL`, `POSTGRES_PRISMA_URL`, `POSTGRES_URL` |
+| `DIRECT_URL` (direct) | `DIRECT_URL`, `DATABASE_URL_UNPOOLED`, `POSTGRES_URL_NON_POOLING`, else the pooled URL |
 
-- If the integration already created `DATABASE_URL`, keep it. Click **Add New**, name it `DIRECT_URL`, and paste the value of `DATABASE_URL_UNPOOLED` (click the eye icon to reveal it).
-- Both strings should end with `?sslmode=require`.
+The build log prints which names it used (`• Database (pooled) : …`), never the values.
+
+**Using your own Neon/Supabase project instead?** In **Project → Settings → Environment Variables**, add `DATABASE_URL` (pooled string, host contains `-pooler`) and optionally `DIRECT_URL` (direct string), both for **Production and Preview**, and both ending in `?sslmode=require`.
+
+> Variables only apply to **new** deployments. After adding or changing one, redeploy.
 
 Why two? The app runs on serverless functions that open many short connections, so they go through the pooler. Schema changes (`prisma db push`) need a direct connection.
 
@@ -152,7 +155,8 @@ Vercel builds and deploys automatically.
 
 | Symptom | Cause / fix |
 |---|---|
-| Build fails: `Environment variable not found: DIRECT_URL` | Add `DIRECT_URL` (Step 4), then redeploy. |
+| Build fails: `Environment variable not found: DIRECT_URL` | You're on an old build script. Pull the latest code (`scripts/vercel-build.mjs`), or add `DIRECT_URL` manually, then redeploy. |
+| Build fails: `No database connection string found` | The database isn't connected to this environment. Go to Storage → your database → **Connect Project**, tick Production and Preview, then redeploy. |
 | Build fails: `Can't reach database server` | Wrong or expired connection string, or a missing `?sslmode=require`. Copy it again from Neon/Storage. |
 | Pages load but show "Couldn't load this data" | Check **Deployments → (latest) → Functions/Logs**. Usually `DATABASE_URL` is missing for that environment (Production vs Preview). |
 | Build fails: `data loss` warning from `prisma db push` | A schema change would delete data. See *Updating the app later*. |
